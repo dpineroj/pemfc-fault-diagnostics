@@ -41,7 +41,8 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-DATA_ROOT = os.path.join("data", "raw", "PEMFC_Parallel-Serpentine")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_ROOT = os.path.join(PROJECT_ROOT, "data", "raw", "PEMFC_Parallel-Serpentine")
 
 CDM_C_BLOCK_SIZE = 26
 CDM_C_GRID_SHAPE = (18, 18)
