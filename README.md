@@ -90,3 +90,4 @@ Place the downloaded dataset under `data/raw/PEMFC_Parallel-Serpentine/` (git-ig
 - **Internal inconsistency in the synthetic prototype**: two cells in `01_spatial_viz_sandbox.ipynb` compute the synthetic NORMAL state's nonuniformity differently (~2× disagreement). Discovered during real-data validation, documented, and deliberately left unmodified since the notebook is frozen.
 
 Full details on all of the above are in `docs/real_data_notes.md`.
+Constructed dataset not included until Phase 3  
