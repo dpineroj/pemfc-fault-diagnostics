@@ -7,7 +7,7 @@ dynamic load cycling for a parallel-serpentine design of a proton exchange
 membrane fuel cell," Data in Brief.
 https://www.sciencedirect.com/science/article/pii/S2352340924003615
 
-File-format findings (see Task 1 audit, data/raw is not tracked in git):
+File-format findings (data/raw is not tracked in git):
   - CDM_C_*.dat / CDM_T_*.dat are repeating per-timestep BLOCKS, not flat
     tables: human timestamp, LabVIEW-epoch timestamp, blank, a field label,
     (CDM_C only: a scalar "voltage" value, blank, a second label), then an

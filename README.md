@@ -1,6 +1,6 @@
 # PEMFC Fault Diagnostics
 
-Spatially-resolved electro-thermal fault signature detection in PEM fuel cells, targeting a gap in the literature: no existing work combines **spatial current-density/temperature resolution + labeled fault conditions + real automotive dynamic loading** for PEMFC fault diagnosis and prediction.
+Spatially-resolved electro-thermal fault signature detection in PEM fuel cells, targeting **spatial current-density/temperature resolution + labeled fault conditions + real automotive dynamic loading** for PEMFC fault diagnosis and prediction.
 
 **Core hypothesis:** a single bulk voltage sensor cannot reliably distinguish between fault modes (flooding, drying, oxygen/hydrogen starvation) — different faults can produce similar voltage drops. A spatially resolved grid of current-density and temperature sensors can, because each fault type leaves a distinct spatial signature.
 
@@ -11,7 +11,7 @@ Spatially-resolved electro-thermal fault signature detection in PEM fuel cells, 
 ## Project structure
 
 ```
-ProjectHFC/
+PEMFC-FAULT-DIAGNOSTICS/
 ├── notebooks/
 │   ├── 01_spatial_viz_sandbox.ipynb   # Synthetic prototype (frozen — see below)
 │   └── 02_real_data_exploration.ipynb # Real-data validation & metric analysis
