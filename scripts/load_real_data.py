@@ -12,8 +12,29 @@ File-format findings (data/raw is not tracked in git):
     tables: human timestamp, LabVIEW-epoch timestamp, blank, a field label,
     (CDM_C only: a scalar "voltage" value, blank, a second label), then an
     N x M tab-delimited comma-decimal grid, then a blank separator line.
-    CDM_C default: 26 lines/block, 18x18 current-density grid (A/cm^2).
+    CDM_C default: 26 lines/block, 18x18 grid, RAW UNITS = per-segment
+    current in Amps, NOT A/cm^2 (see UNITS FIX below -- load_run() converts
+    to true A/cm^2 before returning; parse_cdm_blocks() itself returns the
+    file's raw per-segment-amp values unconverted).
     CDM_T default: 14 lines/block, 9x9 temperature grid (degC).
+  - UNITS FIX (found during Task 3 review): the raw CDM_C grid values were
+    originally treated as already being A/cm^2 density throughout this
+    project (this loader, docs/real_data_notes.md, notebook 02's figures).
+    Confirmed wrong by integrating the raw grid per timestep and comparing
+    against the bulk file's independent INTENSIDAD (total load current)
+    channel, timestamp-aligned via the same merge_asof path used below:
+      - raw grid summed directly (no area factor) vs INTENSIDAD: ratio =
+        1.0053 (std 0.0076, n=17,663 valid timesteps, Normal_Flow FC-DLC) --
+        confirms raw values are per-segment Amps.
+      - raw grid summed and multiplied by segment area (the old, wrong
+        assumption) vs INTENSIDAD: ratio = 0.1551 -- off by ~6.45x, matching
+        1/SEGMENT_AREA_CM2 almost exactly, i.e. an internally consistent
+        double-application of the area factor.
+    Reproduced on a second flow configuration (see
+    test_load_real_data.py) to confirm this is a parser/units property, not
+    something specific to one run. load_run() now divides the raw grid by
+    SEGMENT_AREA_CM2 to return true A/cm^2. Full writeup:
+    docs/synthetic_generator_notes.md.
   - The bulk/system file (PC_*.dat or FC-DLC_*.dat) is a conventional flat
     table: one tab-delimited header row, then one row per second, with
     FECHA (date) + HORA (time, whole-second resolution) and comma-decimal
@@ -48,6 +69,17 @@ CDM_C_BLOCK_SIZE = 26
 CDM_C_GRID_SHAPE = (18, 18)
 CDM_T_BLOCK_SIZE = 14
 CDM_T_GRID_SHAPE = (9, 9)
+
+# Active area per the source paper (Toharias et al. 2024 / Suarez et al.
+# 2023) -- NOT tuned to any specific run. The integration check in
+# test_load_real_data.py finds a 0.53% residual (ratio 1.0053, implying an
+# effective active area of ~49.7 cm^2 against this documented ~50 cm^2) --
+# left as-is and recorded as measured agreement rather than back-fit to
+# force ratio=1.000 exactly, which would fit the constant to one run and
+# destroy the independence of the check.
+TOTAL_ACTIVE_AREA_CM2 = 50.0
+N_CURRENT_SEGMENTS = CDM_C_GRID_SHAPE[0] * CDM_C_GRID_SHAPE[1]
+SEGMENT_AREA_CM2 = TOTAL_ACTIVE_AREA_CM2 / N_CURRENT_SEGMENTS
 
 
 def _parse_human_timestamp(line: str) -> datetime:
@@ -241,7 +273,11 @@ def load_run(
     dict with:
         'config', 'run_type' : str
         'timestamp' : np.ndarray[datetime64[ms]], shape (T,) -- CDM clock
-        'current_grid' : np.ndarray[float32], shape (T, 18, 18), A/cm^2
+        'current_grid' : np.ndarray[float32], shape (T, 18, 18), TRUE A/cm^2
+            -- the raw CDM_C block values are per-segment current in Amps
+            (see module docstring's UNITS FIX note); divided by
+            SEGMENT_AREA_CM2 here before being returned, so every caller
+            gets true density, not the raw per-segment-amp value.
         'temp_grid' : np.ndarray[float32], shape (T, 9, 9), degC
         'bulk' : pd.DataFrame, shape (T, ...) -- bulk channels + CDM scalar
             'voltage_cdm' + raw LabVIEW timestamps, merge_asof-aligned to
@@ -261,6 +297,15 @@ def load_run(
     cdm_c = parse_cdm_blocks(cdm_c_path, CDM_C_BLOCK_SIZE, CDM_C_GRID_SHAPE)
     cdm_t = parse_cdm_blocks(cdm_t_path, CDM_T_BLOCK_SIZE, CDM_T_GRID_SHAPE)
     bulk = read_bulk(bulk_path)
+
+    # UNITS FIX: parse_cdm_blocks() returns the file's raw per-segment
+    # current in Amps, not A/cm^2 density (see module docstring). Convert
+    # here, once, at the loader boundary, so every caller downstream
+    # receives true density -- empirical basis: integrating this raw grid
+    # per timestep and comparing against the bulk file's independent
+    # INTENSIDAD channel gives ratio=1.0053 with NO area factor applied
+    # (see test_load_real_data.py), confirming these are per-segment Amps.
+    cdm_c["grid"] = cdm_c["grid"] / SEGMENT_AREA_CM2
 
     if cdm_c["grid"].shape[0] != cdm_t["grid"].shape[0]:
         raise ValueError(
