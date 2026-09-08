@@ -139,6 +139,12 @@ All three `.dat` files per run: UTF-8, tab-delimited, **comma decimal**
   `V001` channel (~0.5 V) at the same real time, and a single ~50 cm² PEMFC
   cell's OCV shouldn't reach ~1.9 V. Both are loaded as separate, clearly
   labeled fields; neither is assumed to be "the" cell voltage.
+  **`V003`–`V007` are dead channels** (found during the flow-config
+  discrimination premise check, all four configs, `FC-DLC`): `V003`–`V005`
+  are exactly 0 throughout, `V006`/`V007` are ~0.001 or exactly 0 with no
+  real variation. Only `V001` (mean ~0.52–0.55 V across configs) and `V002`
+  (mean ~-0.17 to -0.18 V, opposite sign) carry actual signal. Not
+  previously written down anywhere in the repo before this note.
 - **A pre-existing internal inconsistency was found in notebook 01 itself**
   (discovered during the real-vs-synthetic comparison in
   `02_real_data_exploration.ipynb`; **not fixed** — notebook 01 is out of
