@@ -125,6 +125,129 @@ def generate_normal_grid(seed: int) -> np.ndarray:
     return np.clip(base + noise, 0.30, 0.90)
 
 
+# ---------------------------------------------------------------------------
+# Healthy spatial-structure model v2 (Phase 3, Task 3 review) -- ADDITIVE.
+# generate_normal_grid above is untouched: it remains notebook 01's exact
+# formula and the severity=0 baseline every fault-state interpolation in
+# this file is still built from. This section does not wire into that
+# interpolation yet -- fault-state generation is not modified here.
+#
+# Motivation: Task 3 review found synthetic healthy CV(J) (~0.067,
+# generate_normal_grid) is ~5.7x below real healthy CV(J) (~0.381,
+# Normal_Flow), traced to sigma(J) being ~4.67x too low once the units bug
+# was corrected (not the operating point -- see
+# docs/synthetic_generator_notes.md Sec. 4). Decomposing real Normal_Flow's
+# spatial pattern (normalize each timestep by its own spatial mean, isolate
+# the persistent time-averaged shape from the per-timestep residual) found
+# the persistent shape explains 99.6% of the spatial variance (static_std=
+# 0.3802 vs temporal_std=0.0253) -- static-dominant, not a temporal-noise
+# problem. That persistent shape correlates with distance-from-grid-center
+# at r=0.936, NOT with row/column index (both ~0) -- i.e. NOT the
+# inlet-to-outlet flow-path gradient notebook 01 assumed. A radial quadratic
+# fit explains R^2=0.906 of the shape by itself.
+#
+# This model reproduces that FORM (radially symmetric, quadratic falloff),
+# grounded in a real physical mechanism documented in segmented large-area
+# PEMFC literature: non-uniform bolt-frame clamping pressure produces higher
+# contact pressure (lower contact resistance, higher local current) toward
+# the clamped periphery and lower pressure/current near the center --
+# see the literature note on RADIAL_EDGE_RATIO below for sources and the
+# amplitude-sourcing decision. The specific real-data regression
+# coefficients (a=-0.264, b=0.252, c=-0.0087 from the quadratic fit above)
+# are NOT used here -- only the qualitative form and the R^2 finding that
+# validated it. Parameter values below come from physical reasoning and
+# (where found) literature, never from fitting to the real grids.
+# ---------------------------------------------------------------------------
+
+# Physics-derived, NOT chosen to fit anything: contact pressure under
+# bolt-frame clamping falls off smoothly from the clamped periphery toward
+# the cell center. A quadratic falloff in radius is the natural leading-order
+# term for a smooth pressure field peaked at the frame and dipping at the
+# center (the first non-trivial even term in a radially-symmetric Taylor
+# expansion around the center). The real-data radial fit (R^2=0.906, found
+# without fitting this exponent -- it was assumed then checked) supports
+# this form; it is not derived from that fit.
+RADIAL_EDGE_EXPONENT = 2
+
+# CALIBRATION CHOICE -- literature search performed (4 targeted queries
+# across this and the prior review pass: segmented-cell edge/clamping
+# current-density distribution, clamping-pressure current-density
+# correlation, commercial-size PEMFC non-uniform current density, bolt-frame
+# periphery current-density ratios). Multiple independent papers confirm the
+# MECHANISM (uneven clamping pressure -> uneven contact resistance -> higher
+# local current at higher-pressure regions, typically the bolted periphery
+# of large-area cells) but none gave a stated, citable edge-to-center or
+# max/min current-density RATIO precise enough to use directly:
+#   - Analysis of local current density, temperature, and mechanical
+#     pressure distributions in an operating PEMFC under variable
+#     compression -- https://www.sciencedirect.com/science/article/pii/S0306261925009171
+#   - Advanced parametric model for analysis of the influence of channel
+#     cross section dimensions and clamping pressure on current density
+#     distribution in PEMFC -- https://www.sciencedirect.com/science/article/abs/pii/S0306261921014094
+#   - Investigation of the non-uniform distribution of current density in
+#     commercial-size PEMFCs -- https://www.sciencedirect.com/science/article/abs/pii/S0378775320301397
+#   - Current density and temperature distribution measurement and
+#     homogeneity analysis for a large-area PEMFC -- https://www.sciencedirect.com/science/article/abs/pii/S0360544221021708
+# STATED LIMITATION: absence of a citable magnitude. RADIAL_EDGE_RATIO=2.0 is
+# therefore an order-of-magnitude engineering assumption (idealized
+# center-to-corner ratio), not a literature value, bracketed by 1.5x/2.5x in
+# the Phase 3 sensitivity analysis (docs/synthetic_generator_notes.md) so the
+# result's dependence on this specific choice is visible, not hidden behind
+# one precise-looking number. Never adjusted to make CV(J) hit 0.381.
+RADIAL_EDGE_RATIO = 2.0
+
+# CALIBRATION CHOICE: temporal fluctuation kept clearly subordinate to the
+# static structure by construction -- 1/15 of the static shape's own spatial
+# std (within the instructed 1/10-1/20 range). NOT fit to the real ~1/15
+# static:temporal ratio found during Task 3 review (that number is used only
+# as a post-hoc comparison in docs/synthetic_generator_notes.md); documented
+# here as a realism add-on, not a calibrated quantity.
+TEMPORAL_SUBORDINATION_FACTOR = 15.0
+
+
+def _radial_healthy_shape(edge_ratio: float = RADIAL_EDGE_RATIO) -> np.ndarray:
+    """
+    Persistent (static) normalized spatial shape S(i,j), mean 1 over the
+    grid -- quadratic falloff in distance from grid center
+    (RADIAL_EDGE_EXPONENT=2), amplitude set so the IDEALIZED center (r=0) to
+    corner (r=r_max) ratio equals `edge_ratio`. On this file's 4x4 grid, no
+    cell sits exactly at r=0, so the realized ratio between the actual
+    nearest-to-center and corner CELLS is somewhat less extreme than
+    `edge_ratio` -- a known, stated consequence of the coarser (4x4 vs.
+    real 18x18) discretization, not a separate free parameter.
+    """
+    row_idx, col_idx = np.indices((ROWS, COLS))
+    center_r, center_c = (ROWS - 1) / 2.0, (COLS - 1) / 2.0
+    r = np.sqrt((row_idx - center_r) ** 2 + (col_idx - center_c) ** 2)
+    r_max = r.max()
+    a_edge = edge_ratio - 1.0
+    s_raw = 1.0 + a_edge * (r / r_max) ** RADIAL_EDGE_EXPONENT
+    return s_raw / s_raw.mean()  # renormalize -> shape only (mean=1), carries no load information
+
+
+def generate_healthy_grid_v2(load_level: float = 0.697, seed: int = 0, edge_ratio: float = RADIAL_EDGE_RATIO) -> np.ndarray:
+    """
+    Phase 3 healthy spatial-structure model (additive -- see section header
+    above). J(i,j) = load_level * S(i,j) * (1 + noise(i,j)).
+
+    `load_level` defaults to 0.697 A/cm^2, matching generate_normal_grid's
+    (notebook 01's) synthetic NORMAL operating point -- for comparability
+    with the existing generator, not fit to real data.
+
+    S is the persistent radial shape, renormalized to mean 1, so it carries
+    NO load information; `load_level` scales the whole grid separately. This
+    makes CV(J) load-invariant BY CONSTRUCTION: sigma(J)/mean(J) depends only
+    on S and the noise term, never on load_level. Stated here as the design
+    reasoning -- verified explicitly (not just argued) in the Phase 3
+    validation script / docs/synthetic_generator_notes.md.
+    """
+    rng = np.random.default_rng(seed)
+    S = _radial_healthy_shape(edge_ratio)
+    sigma_temporal = S.std() / TEMPORAL_SUBORDINATION_FACTOR
+    noise = rng.normal(0, sigma_temporal, S.shape)
+    return load_level * S * (1.0 + noise)
+
+
 def generate_starvation_grid(severity: float, seed: int) -> np.ndarray:
     """
     O2 starvation, continuous. Interpolates NORMAL's row/col gradient, base
