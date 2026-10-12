@@ -432,6 +432,13 @@ replaces it.
 
 #### Resolution measurement (`scripts/measure_resolution_effects.py`)
 
+> **Superseded in part by Sec. 7.** The measurement below covers only the
+> Sec. 5 form (now superseded) and only Normal_Flow. Sec. 7 repeats it for
+> all four configurations and for the adopted logistic family, and finds
+> that this form's resolution response runs in the *opposite direction* to
+> the real data's. The conclusions below about autocorrelation being a
+> resolution artifact still hold.
+
 Real 18×18 block-averaged to 4×4 via `np.array_split` ([5,5,4,4] groups per
 axis — all 324 cells used, nothing cropped); CV(J) computed per timestep
 *after* downsampling, since std/mean is nonlinear; autocorrelation computed on
@@ -815,3 +822,131 @@ reported as such, and should carry less weight than a result that turns on
 The same applies in reverse: if a model *fails* only at extreme `r0`/`w`, that
 failure is also against assumed conditions and should not be over-read as a
 real robustness gap.
+
+## 7. Resolution confound, re-measured against the adopted family
+
+Source: `scripts/measure_resolution_effects.py` (re-runnable). Measurement
+only — no parameter was adjusted in response to anything below. This closes
+the last open measurement before notebook 03.
+
+Supersedes the Sec. 5f measurement, which covered only the Sec. 5 form (now
+superseded) on Normal_Flow alone. Here: all four configurations, both forms.
+
+**Method.** Real 18×18 → 4×4 by block-averaging with `np.array_split`,
+partitioning each axis into four groups of sizes [5,5,4,4]. 18 does not
+divide evenly by 4, so this uses all 324 cells and crops nothing, unlike a
+crop-to-16×16-then-reshape. Block-averaging is the physically right operator:
+it is what a coarser sensor does — integrate current over a larger segment
+area. CV(J) = std/mean is nonlinear, so each timestep is downsampled *first*
+and its CV computed after. Autocorrelation is computed on the static
+template, where block-averaging and time-averaging commute. For the family,
+the **same** (c, r0, w) is evaluated at both resolutions — a paired
+comparison that isolates the resolution effect from parameter variation.
+
+### 7a. The 2×2
+
+**CV(J)**
+
+| | 4×4 | 18×18 | 18×18 / 4×4 |
+|---|---|---|---|
+| real (4-config mean) | 0.3108 | 0.3534 | **1.14** |
+| synthetic, superseded Sec. 5 form | 0.2024 | 0.1713 | **0.85** |
+| synthetic, adopted logistic family (mean) | 0.2281 | 0.2546 | **1.12** |
+| *logistic at the real sessions' own fitted parameters* | *0.2774–0.3248* | *0.3141–0.3680* | *1.13* |
+
+Real is 1.14 in **all four configurations individually** (Normal_Flow,
+Inverse_Flow, Inverse_Air_Flow, Inverse_Hydrogen_Flow all 1.14).
+
+**lag-1 autocorrelation (static template)**
+
+| | 4×4 | 18×18 |
+|---|---|---|
+| real (4-config mean) | 0.3249 | 0.9389 |
+| synthetic, superseded form | 0.2941 | 0.9545 |
+| synthetic logistic @ Normal_Flow params | 0.2793 | 0.9628 |
+
+### 7b. The adopted form reproduces real's resolution scaling; the superseded one had it backwards
+
+Real CV(J) rises by **1.14×** from 4×4 to 18×18. The adopted logistic rises
+by **1.12×** (family mean) / **1.13×** (at the real sessions' fitted
+parameters). The superseded form **fell** by 0.85× — not merely a different
+magnitude but the **opposite direction**.
+
+This was not fitted. The form was selected on shape grounds alone — that the
+real radial profile inflects and saturates (§6b). Its resolution response is
+a consequence of that shape, not a target, and it lands on the real value.
+**Weighted honestly**: this is one scalar, and it follows from getting the
+radial profile approximately right, so it is not independent of the shape
+selection in the way a genuinely held-out test would be. But the superseded
+form, which also had a radial profile, got the sign wrong — so the agreement
+is not automatic, and it is the first quantity the adopted form predicts
+that was not used in choosing it.
+
+A second consequence: the real-vs-family gap is now **stable across
+resolution** — 1.36× at 4×4, 1.39× at 18×18. The superseded form's gap
+*widened* with resolution (1.54× → 2.06×), which is what made the Sec. 5f
+figure resolution-dependent and the "~1.9×" headline misleading. That
+pathology is gone.
+
+### 7c. The form is NOT resolution-independent, and "by construction" was the wrong expectation
+
+Checked rather than assumed, as instructed. The answer is no, with a precise
+statement of what *is* invariant:
+
+- **The continuous field is resolution-independent by construction.** `S_raw`
+  depends only on ρ = r/r_max, so the underlying profile is identical at any
+  grid size.
+- **CV(J) is not**, because it is a *sample statistic* computed over a
+  resolution-dependent sampling of radius. Which ρ values exist, and with
+  what multiplicity, changes with N. Paired family mean ratio **1.123**
+  (p5 0.977, p95 1.357).
+- **The sensitivity is wildly uneven across the family**: max deviation from
+  unity is **2.90×**. The extreme cases are a small, identifiable corner —
+  109 of 4000 draws exceed 1.5×, and they cluster at sharp transitions close
+  to the centre (mean w ≈ 0.068 against the family's [0.04, 0.35]; mean
+  r0 ≈ 0.288 against [0.25, 0.70]). Correlation of the ratio with `w` is
+  −0.40 and with `r0` is −0.41. A 4×4 grid has only three distinct radii
+  inside ρ = 0.29, so it cannot resolve a sharp transition sitting there.
+
+**Practical consequence, and it supports the pending generator change**:
+running the generator natively at 18×18 — the validation data's own
+resolution — removes this entire class of error. At 4×4 a meaningful corner
+of the adopted family is misrepresented by up to 2.9×.
+
+### 7d. Where the real sessions fall inside the family
+
+Per the convention adopted in §6g (replacing the retired midpoint criterion),
+stated explicitly rather than summarized:
+
+| configuration | real CV(J) 18×18 | percentile within family | real CV(J) 4×4 | percentile |
+|---|---|---|---|---|
+| Normal_Flow | 0.3810 | 89% | 0.3344 | 87% |
+| Inverse_Flow | 0.3266 | 79% | 0.2877 | 77% |
+| Inverse_Air_Flow | 0.3812 | 89% | 0.3353 | 88% |
+| Inverse_Hydrogen_Flow | 0.3247 | 78% | 0.2858 | 76% |
+
+Family at 18×18: p5 = 0.1262, median = 0.2346, p95 = 0.4503. Real band
+0.3247–0.3812.
+
+**The real sessions sit in the upper quartile of the family, comfortably
+contained but not central.** 11% of the family lies above the real maximum;
+**78% lies below the real minimum**. Under uniform sampling of the adopted
+ranges, the family is therefore skewed toward cells *more uniform* than the
+real one.
+
+Two things follow, neither of which is acted on here:
+
+1. **The "gap" framing is partly obsolete.** Comparing family *mean* to real
+   (1.39×) is the wrong comparison for a family whose whole purpose is to
+   span a range. The meaningful statements are containment and placement —
+   real is inside, at the 78th–89th percentile — not a mean-to-mean ratio.
+   Residual-gap language from Sec. 5/6 should be read with that correction.
+2. **Open question, not a defect**: whether uniform sampling over `c` is the
+   right choice, given it puts most of the family's mass on more-uniform
+   cells than anything observed. Log-uniform sampling would shift mass
+   toward the real end. That is a *sampling* decision, distinct from the
+   bounds adopted in §6g, and is deliberately left open rather than changed
+   here — re-skewing the family to centre it on the real data is exactly the
+   move §6g's retirement of the midpoint criterion warns against doing
+   reflexively in the other direction.
+
