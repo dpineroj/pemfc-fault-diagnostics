@@ -397,7 +397,7 @@ renormalization design predicts.
 
 | metric | synthetic v2 (`edge_ratio=2.0`) | real Normal_Flow | match? |
 |---|---|---|---|
-| CV(J) mean | 0.2024 | 0.3810 (Normal_Flow); band 0.3247–0.3812, mean 0.353 | **No** — 53% of Normal_Flow, 57% of the four-session mean. See the resolution measurement below: the gap is real and is *understated* by this 4×4-vs-18×18 row. |
+| CV(J) mean | 0.2024 | 0.3810 (Normal_Flow); band 0.3247–0.3812, mean 0.353 | **No** — 53% of Normal_Flow, 57% of the four-session mean. See the resolution measurement below: the gap is real and is *understated* by this 4×4-vs-18×18 row. **Applies to the superseded point model only — see note below.** |
 | static-variance share | 99.6% | 99.6% | Matches, but see Sec. 5d note — near-automatic given the instructed noise-ratio range, not independent confirmation |
 | gradient vs. row/col index | 0.0000 / 0.0000 (exact, by symmetry) | -0.065 / -0.026 | Matches qualitatively — neither is a linear flow-path gradient |
 | correlation with distance-from-center | 0.986 | 0.936 | Matches qualitatively — both strongly radial; synthetic is *more* purely radial since it has no other structure by construction |
@@ -472,6 +472,15 @@ in the synthetic model. Note the direction — the headline "~1.9×" figure came
 from comparing synthetic-4×4 to real-18×18, which flattered the model; the
 honest same-resolution figure at the validation data's native 18×18 is 2.22×
 against Normal_Flow, 2.06× against the band.
+
+> **Scope note on every gap ratio in this section (2.22×, 2.06×, 1.65×, 53%,
+> 57%).** These compare a *point* model — the superseded Sec. 5 form at a
+> single `edge_ratio` — against the real value. For a point estimate that is
+> the correct comparison, and these figures stand as descriptions of that
+> model. They do **not** transfer to the adopted logistic family, which is a
+> distribution rather than a point: for a family the meaningful statements
+> are containment and placement (§7d), not a mean-to-mean ratio. Do not carry
+> these ratios forward as the adopted family's "residual gap".
 
 #### Where the deficit lives — sharpest characterization to date
 
@@ -882,11 +891,22 @@ form, which also had a radial profile, got the sign wrong — so the agreement
 is not automatic, and it is the first quantity the adopted form predicts
 that was not used in choosing it.
 
-A second consequence: the real-vs-family gap is now **stable across
-resolution** — 1.36× at 4×4, 1.39× at 18×18. The superseded form's gap
+A second consequence concerns the superseded form's gap behaviour: it
 *widened* with resolution (1.54× → 2.06×), which is what made the Sec. 5f
 figure resolution-dependent and the "~1.9×" headline misleading. That
-pathology is gone.
+pathology is gone — the adopted family's resolution response matches real's.
+
+> **SUPERSEDED — mean-to-mean gap framing for the family.** This paragraph
+> originally continued: ~~"the real-vs-family gap is now **stable across
+> resolution** — 1.36× at 4×4, 1.39× at 18×18."~~ Those numbers are correct
+> arithmetic but the wrong comparison. A *family* is deliberately broad;
+> comparing its mean to the real value measures where the family's centre
+> happens to sit, not whether the family covers the real cell. The right
+> statements are containment and placement — see §7d: real sits at the
+> **78th–89th percentile** inside the family at both resolutions, contained
+> but not central. **"1.39× residual gap" should not be carried forward as a
+> headline number.** It is retained struck through because the earlier
+> sections reasoned from it.
 
 ### 7c. The form is NOT resolution-independent, and "by construction" was the wrong expectation
 
@@ -941,12 +961,25 @@ Two things follow, neither of which is acted on here:
    span a range. The meaningful statements are containment and placement —
    real is inside, at the 78th–89th percentile — not a mean-to-mean ratio.
    Residual-gap language from Sec. 5/6 should be read with that correction.
-2. **Open question, not a defect**: whether uniform sampling over `c` is the
-   right choice, given it puts most of the family's mass on more-uniform
-   cells than anything observed. Log-uniform sampling would shift mass
-   toward the real end. That is a *sampling* decision, distinct from the
-   bounds adopted in §6g, and is deliberately left open rather than changed
-   here — re-skewing the family to centre it on the real data is exactly the
-   move §6g's retirement of the midpoint criterion warns against doing
-   reflexively in the other direction.
+2. **Uniform sampling is RETAINED — a decision, not an open question.** The
+   skew is a known and accepted property of the family, with a directional
+   consequence that works in the project's favour:
+
+   Under uniform sampling of the §6g ranges, **78% of the family lies below
+   the real minimum and 11% above the real maximum** — the family is weighted
+   toward cells *more spatially uniform* than any observed. A more uniform
+   healthy cell has a *lower* CV(J) baseline, so an anomaly threshold that
+   must stay quiet across it has less headroom: **the skew makes
+   false-alarm avoidance harder, not easier.** A model that stays quiet
+   across this family is therefore making a **stronger** claim than one
+   validated on a family centred on the real data.
+
+   Log-uniform sampling of `c` would shift mass toward the real end and make
+   the test easier. It is rejected for that reason. Re-skewing a family to
+   centre it on the validation data is the same reflex §6g's retirement of
+   the midpoint criterion warns against, pointed the other way — and here it
+   would additionally weaken the claim being tested.
+
+   Recorded as a property to state in the writeup, not a defect pending
+   correction.
 
