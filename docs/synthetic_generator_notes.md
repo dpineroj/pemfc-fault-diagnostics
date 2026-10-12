@@ -113,10 +113,19 @@ full healthy population, n=795 non-`near_seam_buffer` timesteps, averages
 0.0762) vs. real healthy Normal_Flow CV(J) ≈ **0.381** (notebook 02) — a
 **~5.7x gap** (5.0x against the generator's own population mean). This is
 the first time CV(J) has been checked synthetic-vs-real at all; CV(J) had
-only ever been computed on real data before this notebook. The gap is
-**scale-invariant and unaffected by the units correction below** — CV(J)'s
-value doesn't change no matter what units the underlying grid is in, since
-it's a ratio of two quantities in the same units.
+only ever been computed on real data before this notebook.
+
+> **Later correction (cross-session measurement):** the 0.381 figure is
+> Normal_Flow's alone. Real healthy CV(J) is a **band across the four
+> sessions — 0.3810 / 0.3266 / 0.3812 / 0.3247, mean 0.353** (see
+> `docs/real_data_notes.md`, "Spatial structure: a radial template"). Gap
+> figures stated against 0.381 alone throughout this section are therefore
+> against the top of the band, not its centre. Section 5f restates the
+> current gap against the band.
+
+The gap is **scale-invariant and unaffected by the units correction
+below** — CV(J)'s value doesn't change no matter what units the underlying
+grid is in, since it's a ratio of two quantities in the same units.
 
 **Corrected attribution — an earlier version of this finding was wrong, and
 here is why**: an initial pass at this comparison decomposed the CV(J) gap
@@ -226,6 +235,14 @@ splitting the persistent time-averaged shape from the per-timestep residual:
 Static structure dominates by ~15×. This is a static-template problem, not
 a temporal-noise problem — it determines everything about the model below.
 
+**Cross-session (added later):** static dominance holds in all four
+configurations (99.39%–99.96% of variance), but the static/temporal *ratio*
+is **not** universal — it spans **12.8× to 48.8×** (Normal_Flow 15.0×,
+Inverse_Air 12.8×, Inverse_Flow 48.8×, Inverse_Hydrogen 47.5×). Normal_Flow,
+the session this section was derived from, is at the noisy end. The
+qualitative conclusion — static-dominant, by more than an order of magnitude
+everywhere — is unaffected.
+
 ### 5b. The static pattern's shape — supersedes notebook 01's assumption, doesn't correct it
 
 **Finding, recorded here as a distinct result, not a footnote**: notebook
@@ -277,12 +294,52 @@ J(i,j)     = load_level * S(i,j) * (1 + noise(i,j))    # noise ~ N(0, sigma_temp
 `r(i,j)` = distance from grid center; `r_max` = distance to the farthest
 grid cell.
 
-- **`p_edge = 2` — physics-derived, not chosen.** A quadratic falloff is
-  the natural leading-order term for a smooth, radially-symmetric pressure
-  field peaked at the clamped frame and dipping at the center (the first
-  non-trivial even term in a radial expansion around the center). The real
-  radial fit (R²=0.906, Sec. 5b) was checked against this assumed form, not
-  used to derive it.
+- **`p_edge = 2` — SUPERSEDED. The "physics-derived" justification does not
+  hold, and the data contradicts p=2 specifically.**
+
+  > ~~**`p_edge = 2` — physics-derived, not chosen.** A quadratic falloff is
+  > the natural leading-order term for a smooth, radially-symmetric pressure
+  > field peaked at the clamped frame and dipping at the center (the first
+  > non-trivial even term in a radial expansion around the center). The real
+  > radial fit (R²=0.906, Sec. 5b) was checked against this assumed form, not
+  > used to derive it.~~
+
+  **The broken link.** That argument derives a quadratic **pressure** field,
+  then silently transfers the exponent to the **current-density** template.
+  The chain from one to the other — contact pressure → contact resistance →
+  local overpotential/polarization → local current density — is not linear at
+  any step. Contact resistance falls nonlinearly with pressure and saturates;
+  current density responds to overpotential through Butler–Volmer kinetics
+  plus ohmic and transport terms. So a quadratic pressure field does **not**
+  imply a quadratic current-density template. The original text carried that
+  linearity assumption without stating it, and it was never justified. The
+  pressure argument may well be correct about pressure; it says much less than
+  claimed about what this model actually generates.
+
+  **What the data says.** Fitting `a + b·rᵖ` to the real template (two free
+  parameters at every p, so the comparison is like-for-like) gives R² =
+  0.8760 (p=1), 0.8282 (p=1.5), **0.7639 (p=2)**, 0.6255 (p=3), 0.5008 (p=4)
+  — monotonically decreasing in p. The best free quadratic, `a + b·r + c·r²`,
+  fits at R²=0.9057 with `b=+0.2517, c=−0.0087`: a dominant positive *linear*
+  term with slight *negative* curvature, i.e. rising and gently saturating.
+  The model's form is flat at the centre with *positive* curvature — the
+  opposite sign on the second-order term. p=2 is the worst-fitting of the
+  plausible exponents tested, not the best.
+
+  **Decisive evidence that it is a shape problem, not an amplitude problem**:
+  under this form no single amplitude reproduces both the real template's
+  spread and its depth. Matching the radial-component std (0.3619) requires
+  `edge_ratio` 4.63, which yields max/min 4.57× against the real 17.5×;
+  matching the real minimum requires `edge_ratio` ≈ 32, which overshoots the
+  std by ~60%. Off-centre structure was checked and ruled out as an
+  explanation (best-fit re-centring gains only +0.008 R²; the template's
+  argmin sits at (9,9) against a geometric centre of (8.5,8.5)).
+
+  **Status**: the exponent is now treated as an *unknown*, not a derived
+  constant. It is not being replaced with p=1 — that would substitute a
+  value justified by the validation data for one justified by a broken
+  argument, which is worse, not better. See the healthy-family design
+  discussion for how the uncertainty is carried forward instead.
 - **`A_edge` (via `RADIAL_EDGE_RATIO = 2.0`) — CALIBRATION CHOICE, per Sec.
   5c's stated limitation.** No citable literature ratio found, so set to
   produce an idealized center(r=0)-to-corner(r=r_max) ratio of 2.0×,
@@ -295,7 +352,12 @@ grid cell.
   (within the instructed 1/10–1/20 "clearly subordinate" range), NOT fit to
   the real ~1/15 static:temporal ratio found in Sec. 5a — that real ratio
   is used only as the post-hoc comparison in Sec. 5f, never as a fitting
-  target. (Note: any choice in the 1/10–1/20 range mathematically forces
+  target. **The 15 should not be read as a universal value**: the observed
+  real static/temporal ratio spans 12.8×–48.8× across the four sessions, so
+  15 sits near two of them (Normal_Flow 15.0×, Inverse_Air 12.8×) and far
+  from the other two (~48×). It is a defensible choice inside the instructed
+  1/10–1/20 band, not a measured constant.
+  (Note: any choice in the 1/10–1/20 range mathematically forces
   the static-variance share above 99% regardless of the exact value, since
   squaring a ratio ≥10 dominates — so Sec. 5f's 99.6%-vs-99.6% match below
   is a near-automatic consequence of picking a value in the instructed
@@ -318,9 +380,10 @@ CV(J), n=2000 seeds per ratio, `load_level=0.697`:
 | **2.0 (chosen)** | **0.2024** | 0.1920 – 0.2148 |
 | 2.5 | 0.2577 | 0.2446 – 0.2734 |
 
-All three land well below real Normal_Flow's 0.381 — the chosen value
+All three land well below the real band (0.3247–0.3812 across the four
+sessions, mean 0.353; 0.381 is Normal_Flow specifically) — the chosen value
 (0.2024) recovers roughly half the gap from the original synthetic figure
-(0.067 → 0.2024 is a 3× improvement toward 0.381), not the full gap. **This
+(0.067 → 0.2024 is a 3× improvement toward the band), not the full gap. **This
 was not tuned toward 0.381 and none of these three numbers were adjusted
 after computing them.** Reported as the result to discuss, per instruction,
 not as a target to keep pushing until it lands closer.
@@ -334,7 +397,7 @@ renormalization design predicts.
 
 | metric | synthetic v2 (`edge_ratio=2.0`) | real Normal_Flow | match? |
 |---|---|---|---|
-| CV(J) mean | 0.2024 | 0.3810 | **No** — 53% of real. See the resolution measurement below: the gap is real and is *understated* by this 4×4-vs-18×18 row. |
+| CV(J) mean | 0.2024 | 0.3810 (Normal_Flow); band 0.3247–0.3812, mean 0.353 | **No** — 53% of Normal_Flow, 57% of the four-session mean. See the resolution measurement below: the gap is real and is *understated* by this 4×4-vs-18×18 row. |
 | static-variance share | 99.6% | 99.6% | Matches, but see Sec. 5d note — near-automatic given the instructed noise-ratio range, not independent confirmation |
 | gradient vs. row/col index | 0.0000 / 0.0000 (exact, by symmetry) | -0.065 / -0.026 | Matches qualitatively — neither is a linear flow-path gradient |
 | correlation with distance-from-center | 0.986 | 0.936 | Matches qualitatively — both strongly radial; synthetic is *more* purely radial since it has no other structure by construction |
@@ -396,28 +459,50 @@ was never wrong; the original comparison was. This is closed as a concern.
 
 **CV(J): real, and worse than previously reported.** The gap survives
 resolution matching and *widens* on the finer grid: 1.65× at 4×4, 2.22× at
-18×18. Matching resolution does not shrink it, so it is a genuine amplitude
-deficit in the synthetic model. Note the direction — the headline "~1.9×"
-figure came from comparing synthetic-4×4 to real-18×18, which flattered the
-model; the honest same-resolution figure at the validation data's native
-18×18 is 2.22×.
+18×18 (against Normal_Flow; **2.06× against the four-session mean of 0.353**).
+Matching resolution does not shrink it, so it is a genuine amplitude deficit
+in the synthetic model. Note the direction — the headline "~1.9×" figure came
+from comparing synthetic-4×4 to real-18×18, which flattered the model; the
+honest same-resolution figure at the validation data's native 18×18 is 2.22×
+against Normal_Flow, 2.06× against the band.
 
-**Where the deficit actually lives** (from
-`scripts/analyze_real_structure.py`, measurement only — no parameter was
-changed in response): decomposing the real template against its own quadratic
-fit gives a radial component of std 0.3619 and a non-radial residual of std
-0.1167 (Normal_Flow). A purely radial model, even one reproducing the real
-cell's radial term exactly, would therefore top out near 0.36 — and ours
-produces 0.1713 at 18×18. So the deficit is *within* the radial term's
-amplitude, not merely the absence of the residual structure. Separately, the
-axis-collapsed edge/center profile ratio of the real template (1.72–1.99
-across sessions) sits close to the declared `RADIAL_EDGE_RATIO = 2.0`, but
-these are **different quantities** — the model's parameter is an idealized
-centre-to-corner ratio on the continuous field, the profile ratio collapses an
-axis and averages strong and weak cells together. The real template's true 2D
-spread is far wider than the profile ratio suggests (max/min 7.1×–17.6×
-across sessions). The apparent closeness of 1.9 and 2.0 is therefore not
-validation of the parameter, and was not treated as such.
+#### Where the deficit lives — sharpest characterization to date
+
+From `scripts/analyze_real_structure.py`. **Measurement only; no parameter
+was changed in response to any number here.**
+
+Decomposing each real template against its own quadratic-in-radius fit splits
+it into a radial component and a non-radial residual:
+
+| session | radial component std | non-radial residual std |
+|---|---|---|
+| Normal_Flow | 0.3619 | 0.1167 |
+| Inverse_Flow | 0.3123 | 0.0953 |
+| Inverse_Air_Flow | 0.3609 | 0.1191 |
+| Inverse_Hydrogen_Flow | 0.3097 | 0.0974 |
+| **mean** | **0.3362** | **0.1071** |
+
+**The deficit is inside the radial term's amplitude, not in the missing
+residual structure.** A purely radial model that reproduced the real cell's
+radial term exactly would reach ~0.34–0.36. Ours produces **0.1713** at
+18×18. So even granting our model zero credit for the non-radial residual it
+cannot represent, it is still short by roughly a factor of two *on the
+component it does model*. Adding the missing residual structure would not
+close the gap; the radial term itself is too weak.
+
+This supersedes the earlier framing that treated the shortfall as partly a
+smoothness/structure problem — it is an amplitude problem, localized to one
+term.
+
+**A caution on the edge/center ratio.** The axis-collapsed edge/center
+profile ratio of the real templates (1.72–1.99 across sessions) sits close to
+the declared `RADIAL_EDGE_RATIO = 2.0`. These are **different quantities**:
+the model's parameter is an idealized centre-to-corner ratio on the
+continuous field, while the profile ratio collapses an axis and averages
+strong and weak cells together. The real templates' true 2D spread is far
+wider than the profile ratio suggests — **max/min 7.1×–17.6×**. The apparent
+closeness of 1.9 and 2.0 is therefore coincidental, is not validation of the
+parameter, and was not treated as such.
 
 **What this model gets right**: the qualitative FORM — radial, not
 directional; no false flow-path gradient; CV(J) load-invariant by construction
@@ -443,3 +528,258 @@ above) regenerate every real-data number in this section from the corrected
 loader. Regression test: `scripts/test_fault_generator.py` — asserts CV(J) stays in
 `[0.15, 0.25]` at the default `edge_ratio=2.0` and remains load-invariant to
 1e-9 tolerance across 5 load levels.
+
+## 6. Healthy-template functional form: two forms tested, one withdrawn
+
+Sec. 5 established *that* the synthetic healthy template is too weak (CV(J)
+2.22× low at 18×18) and *where* the deficit sits (inside the radial term's
+amplitude, not the missing non-radial residual). This section records the
+search for a form that can actually carry that amplitude. Everything here is
+measurement; no bounds are set and no parameter family is adopted.
+
+### 6a. The two-parameter power form — proposed, tested, WITHDRAWN
+
+Form: `S_raw = d + (1−d)·(r/r_max)^p`, normalized to mean 1. `d` was intended
+as a centre floor and `p` as the falloff shape, giving depth and spread
+independent control — which the previous one-parameter form (`p` pinned at 2)
+could not do.
+
+Fitted independently to all four configurations (both the real template and
+the model have mean exactly 1, so the fit is over `(d, p)` only, with no
+amplitude nuisance parameter):
+
+| configuration | d | p | R² | R² at p=2 (previous form) | gain |
+|---|---|---|---|---|---|
+| Normal_Flow | 0.0006 | 0.911 | 0.8804 | 0.7639 | +0.117 |
+| Inverse_Flow | 0.0006 | 0.768 | 0.8864 | 0.7442 | +0.142 |
+| Inverse_Air_Flow | 0.0006 | 0.911 | 0.8775 | 0.7623 | +0.115 |
+| Inverse_Hydrogen_Flow | 0.0006 | 0.755 | 0.8817 | 0.7393 | +0.142 |
+
+**WITHDRAWN — `d` is not identifiable in the regime the real data occupies.**
+`d` railed at the search grid's lower edge in all four configurations.
+Probing it directly: R² stays within 0.002 of optimum across **d ∈ [1×10⁻⁶,
+0.018]** — roughly four orders of magnitude — with `p` sliding 0.910→0.925 to
+compensate. The optimum sits at the `d→0` boundary. In the region where the
+real cell lives the two parameters collapse onto a degenerate ridge, and the
+second degree of freedom buys ~0.004 R² over a plain linear-in-radius profile
+(0.876). Ranging `d` would have ranged a parameter the data cannot constrain.
+
+**Correction to a previously stated figure.** An earlier note put the real
+sessions at `d ≈ 0.02–0.14`. That came from a *different* objective — a grid
+search for the `(d, p)` pair that simultaneously matched the template's std
+and its max/min — not from a least-squares fit to the template. A proper fit
+puts `d` at ~0.0006 or lower (degenerate to zero). The two objectives
+disagree precisely *because* the form cannot fit the profile shape, so
+"match two summary statistics" and "least-squares the whole map" land in
+different places. The `0.02–0.14` figure is superseded and should not be
+used.
+
+### 6b. Why every power law stalls: the real profile is sigmoidal
+
+Mean template value by radius bin (Normal_Flow), model columns at each form's
+own best fit:
+
+| r/r_max | 0.1 | 0.2 | 0.3 | 0.4 | 0.5 | 0.6 | 0.7 | 0.8 | 0.9 |
+|---|---|---|---|---|---|---|---|---|---|
+| **real** | 0.148 | 0.316 | 0.381 | 0.638 | 0.958 | 1.178 | 1.315 | 1.370 | 1.392 |
+| power form (d/p) | 0.126 | 0.336 | 0.533 | 0.712 | 0.903 | 1.090 | 1.258 | 1.415 | 1.548 |
+| inflected logistic | 0.209 | 0.273 | 0.411 | 0.639 | 0.947 | 1.189 | 1.310 | 1.364 | 1.385 |
+
+The real profile has a flattish inner region, a steep mid-radius rise, and
+**saturates at the edge** (1.315 → 1.370 → 1.392). The power form keeps
+climbing (1.258 → 1.415 → 1.548) because a power law has monotone curvature
+and **cannot produce an inflection**. This is the structural reason every
+power-law variant stalls: p=2 at R²=0.764, the d/p form at 0.880, and even a
+free quadratic at 0.906 — the last doing best of the three only because its
+negative `c` term lets it bend over slightly at the edge.
+
+### 6c. Inflected (logistic) form — capability and identifiability
+
+```
+rho    = r / r_max                                           in [0, 1]
+g      = [σ((rho−r0)/w) − σ(−r0/w)] / [σ((1−r0)/w) − σ(−r0/w)]
+S_raw  = c + (1−c)·g            so S_raw(0)=c, S_raw(r_max)=1 exactly
+S      = S_raw / mean(S_raw)
+```
+`c` centre floor (centre-to-edge ratio before normalization), `r0` transition
+radius, `w` transition sharpness. Edge saturation is **implied** by `r0` and
+`w` rather than given its own parameter — an extra knob duplicating existing
+ones is the degeneracy trap 6a fell into.
+
+Fitted per configuration:
+
+| configuration | c | r0 | w | R² |
+|---|---|---|---|---|
+| Normal_Flow | 0.1390 | 0.4478 | 0.1123 | **0.9368** |
+| Inverse_Flow | 0.2000 | 0.4273 | 0.1146 | **0.9410** |
+| Inverse_Air_Flow | 0.1403 | 0.4482 | 0.1131 | **0.9322** |
+| Inverse_Hydrogen_Flow | 0.2055 | 0.4273 | 0.1142 | **0.9362** |
+
+Against the benchmarks on Normal_Flow, at equal or lower parameter count:
+
+| form | params | R² |
+|---|---|---|
+| current: p=2, amplitude free | 1 | 0.7639 |
+| withdrawn d/p power form | 2 | 0.8804 |
+| free quadratic `a+b·r+c·r²` | 3 | 0.9057 |
+| **inflected logistic** | 3 | **0.9368** |
+
+It reproduces the edge saturation the power form could not (6b table,
+residuals −0.005 to −0.007 in the outer three bins). Its remaining error is
+concentrated in the inner two bins (+0.061 at r/r_max=0.1, −0.042 at 0.2):
+the real centre is deeper, and the rise just outside it sharper, than a
+single logistic produces.
+
+**Identifiability — the test that killed `d`, applied to all three
+parameters.** Span of each parameter keeping R² within 0.002 of optimum,
+others held at their fitted values:
+
+| parameter | within-0.002 span (Normal_Flow) | ratio | compare |
+|---|---|---|---|
+| `c` | [0.1113, 0.1675] | 1.5× | — |
+| `r0` | [0.4333, 0.4623] | 1.1× | — |
+| `w` | [0.0991, 0.1281] | 1.3× | — |
+| *(withdrawn `d`)* | *[1×10⁻⁶, 0.018]* | *~18,000×* | *degenerate* |
+
+All three are tightly constrained, and all three genuinely matter: over their
+full sweeps R² falls to 0.078 (`c`), −1.18 (`r0`), and 0.566 (`w`). Same
+pattern in all four configurations. **This form does not have the degeneracy
+that withdrew the previous one.**
+
+### 6d. What is NOT settled here
+
+No bounds, no parameter family, and no adoption decision. The physical
+picture (a bolted frame saturating at both limits — fully compressed at the
+perimeter, relaxed at the centre) is a *motivation* for a sigmoid, not a
+derivation of one: the same pressure → contact-resistance → overpotential →
+current-density chain that broke the p=2 argument (Sec. 5d) applies here
+unchanged, and nothing in it fixes `r0` or `w`. More pointedly, this form was
+selected **because the real templates show an inflection** — which is a
+stronger dependence on the validation data than p=2 ever had, since p=2 at
+least carried an independent (if invalid) argument. That dependence is real
+and is not cancelled by the form fitting well.
+
+### 6e. The inner-region residual: diagnosed, and it is not fixable by a fourth parameter
+
+The §6c fit leaves residuals of +0.061 and −0.042 in the inner two radius
+bins while the outer bins sit within 0.007. Diagnosed before treating the
+form as settled, and deliberately **without** adding a parameter to absorb it.
+
+**The decisive measurement: the purely-radial ceiling is R² = 0.9416.** That
+is what a *free arbitrary function of radius* achieves — each radius shell
+assigned its own mean, roughly 40 effective parameters, the most flexible
+radial model that can exist on this grid. **5.84% of the template's variance
+is irreducibly non-radial** and no radial form of any complexity can reach
+it. The three-parameter logistic achieves 0.9368, i.e. **99.5% of all
+radially-explainable variance**. There is ~0.005 of headroom left. A fourth
+parameter cannot buy more than that, and would be spent chasing structure a
+radial model is the wrong tool for.
+
+**What the inner residual actually is.** Not a distinct central feature
+(answer (a)), and not discretization noise (answer (b)) — a third thing:
+
+1. *It is reproducible, so not sampling noise.* Shell-level residuals at
+   rho = 0.0588 / 0.1315 / 0.1765 / 0.2121 are +0.061 / −0.024 / −0.015 /
+   −0.075 for Normal_Flow and +0.062 / −0.024 / −0.017 / −0.076 for
+   Inverse_Air_Flow — near-identical. Inverse_Flow and Inverse_Hydrogen_Flow
+   agree with each other equally closely at their own (different) values.
+   Random small-sample error would not reproduce like this.
+2. *The non-radial component is proportionally largest where the radial
+   signal is weakest.* Within-shell scatter runs ~18–28% of the shell mean
+   across most radii but **45% at the innermost shell**, because the radial
+   signal there is small (shell mean 0.148) while the non-radial component is
+   not. The inner "misfit" is mostly the irreducible 5.84% showing up where
+   it is proportionally worst.
+3. *There is a genuine directional feature at the centre, and it is
+   non-radial by construction.* The four innermost cells are 0.2600, 0.1386,
+   0.1064, 0.0886 — a 2.9× spread across four adjacent cells, in a clear
+   diagonal gradient, reproducing almost exactly in Inverse_Air_Flow (0.2593,
+   0.1397, 0.1077, 0.0912). This is real structure, but it is *directional*,
+   so no radial profile — not the logistic, not a free radial function — can
+   represent it. It belongs to the 5.84%.
+4. *A mild non-monotonicity exists in one cluster only.* Shell means at
+   rho = 0.2121 vs 0.2425 differ by +2.0 and +2.1 sem in Normal_Flow and
+   Inverse_Air_Flow, but only +0.3 and +0.2 sem in the other two. A monotone
+   radial form cannot carry a bump; this contributes to the inner residual in
+   the first cluster and barely at all in the second.
+
+**Conclusion: settled, not open.** The form is at 99.5% of its achievable
+ceiling. The remaining error is non-radial structure that is out of scope for
+a radial template by definition. No fourth parameter.
+
+### 6f. What Phase 5's no-false-alarm test can and cannot claim
+
+Stated plainly because the answer changed, and not in the project's favour.
+
+**The functional form was selected from the validation data.** The family is
+radial because the real templates are radial (`docs/real_data_notes.md`,
+cross-session section), and inflected/saturating because the real radial
+profile inflects and saturates (§6b). That is a stronger dependence on the
+Phase 5 validation set than the superseded `p = 2` ever had — p=2 at least
+carried an independent argument, even though §5d shows it was invalid.
+
+**Phase 5 can still claim**: that a model trained across a span of healthy
+*parameter values* stays quiet on a healthy cell whose parameter values it
+did not see in training. That is a real generalization test and a meaningful
+one — it is the difference between a model that memorized one healthy
+baseline and one that tolerates a range of them.
+
+**Phase 5 can no longer claim**: independence from the real data's
+*structure*. A model trained on this family has the real cell's structural
+form — radial, inflected, saturating at both ends — built in by construction.
+A quiet false-alarm result partly reflects that the family was built to look
+structurally like the thing it is validated against. The test is of
+parameter-value generalization inside an assumed form, not of the form.
+
+**The earlier held-out-region framing was relying on an independence we do
+not have.** That proposal (now withdrawn for a separate reason — all four
+real sessions occupy the same corner, §6a/finding 3) would have held out the
+real cell's parameter region and claimed the resulting test was independent.
+Even had the parameter spread supported it, holding out parameter *values*
+would not have restored *structural* independence, because the form is shared
+across the whole family by construction. Worth recording as a second,
+independent reason that framing does not deliver what it promised.
+
+**What would restore structural independence**: a second real cell with a
+materially different template, or a form derived without reference to this
+dataset. Neither is available. The honest scope is the narrow claim above.
+
+### 6g. Proposed bounds — and an asymmetry that should not be smoothed over
+
+Proposed, not adopted. Stated with what sets each bound and where the real
+sessions fall.
+
+| parameter | proposed range | what sets it | real sessions |
+|---|---|---|---|
+| `c` centre floor | **[0.05, 0.60]** | Observed cross-session variation (1.48×, two clusters) gives a measured scale for how much this parameter moves; bracketed to ~3× beyond the observed band in each direction. Upper bound 0.60 is a markedly more uniform cell (max/min ≈ 1.7 against the observed 7–17×); lower bound 0.05 a markedly deeper one. | 0.139, 0.140, 0.200, 0.206 — lower-middle of the range |
+| `r0` transition radius | **[0.25, 0.70]** | Geometry only. Lower: compression falling off close to the centre. Upper: only the outer third affected. No empirical content — see below. | 0.427–0.448 — just below the arithmetic midpoint |
+| `w` sharpness | **[0.04, 0.35]** | Shape limits only. Lower: ~3× sharper than observed, approaching a step. Upper: ~3× broader, where the inflection becomes imperceptible and the profile degenerates toward the power-law shapes §6b rejected. No empirical content. | 0.112–0.115 — lower-middle |
+
+**The asymmetry, stated rather than smoothed.** These three bounds are not
+equally grounded and should not be read as though they were:
+
+- **`c` has thin but real empirical content.** It varies 1.48× across the
+  four sessions, in two clean clusters. That is a *measured* scale for how
+  much centre depth moves between states of this cell. It is thin because the
+  variation is confounded (H₂ routing vs. session block — see
+  `docs/real_data_notes.md`), so we know something moves by 1.48× but not
+  what drives it, and therefore not whether 1.48× is the right scale for
+  "a different cell" as opposed to "the same cell on another day".
+- **`r0` and `w` have essentially none.** They are fixed to within 5% and 2%
+  respectively in every session available (CV 2.4% and 0.8%). The data says
+  what they *are*; it says nothing whatever about how much they could vary
+  across cells. Ranging them is asserting variability that no observation
+  supports. A Phase 5 result that depends on `r0`/`w` breadth is resting on
+  assumption, and should carry less weight than one that depends on `c`.
+
+**On the midpoint criterion — it is incompatible with symmetric bracketing,
+and no bound here was adjusted to satisfy it.** The criterion (a range whose
+midpoint lands on the real values is suspect) and the bracketing goal (span
+clearly more and clearly less extreme than observed) cannot both hold:
+bracketing symmetrically around an observed band *necessarily* places the
+midpoint on that band. For `c`, the log-midpoint of [0.05, 0.60] is 0.173,
+inside the observed 0.139–0.206. That is an arithmetic consequence of
+bracketing, not evidence of tuning. Skewing the range to move the midpoint
+off the observations would be cosmetic — it would make the family
+asymmetrically wrong in order to look untuned. Reported as-is.
+

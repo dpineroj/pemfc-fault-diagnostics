@@ -200,6 +200,141 @@ healthy operation — not that it still discriminates fault states as well
 as, or better than, raw σ(J) would. That remains open until fault-labeled
 data is available.
 
+## Spatial structure: a radial template, reproducible across all four sessions
+
+Source: `scripts/analyze_real_structure.py` (re-runnable; re-derives every
+figure below from the corrected loader).
+
+Normalizing each timestep by its own spatial mean (which removes load level
+and leaves the *shape*), then separating the time-averaged persistent
+template from the per-timestep residual, gives the same result in every one
+of the four flow configurations:
+
+| configuration | static std | temporal std | static share | corr vs. distance-from-centre | quadratic-in-radius R² | CV(J) |
+|---|---|---|---|---|---|---|
+| Normal_Flow | 0.3802 | 0.0253 | 99.56% | +0.9360 | 0.9057 | 0.3810 |
+| Inverse_Flow | 0.3265 | 0.0067 | 99.96% | +0.9331 | 0.9149 | 0.3266 |
+| Inverse_Air_Flow | 0.3800 | 0.0298 | 99.39% | +0.9344 | 0.9018 | 0.3812 |
+| Inverse_Hydrogen_Flow | 0.3247 | 0.0068 | 99.96% | +0.9303 | 0.9100 | 0.3247 |
+
+Row- and column-index correlations are near zero in all four (|r| ≤ 0.104),
+so this is **not** an inlet-to-outlet flow-path gradient. It is a radially
+symmetric "bathtub": lowest in the centre of the active area, highest toward
+the edges and corners.
+
+**Cross-session template correlation** (flattened static templates,
+pairwise):
+
+| pair | r |
+|---|---|
+| Normal_Flow vs. Inverse_Flow | +0.9922 |
+| Normal_Flow vs. Inverse_Air_Flow | +0.9930 |
+| Normal_Flow vs. Inverse_Hydrogen_Flow | +0.9919 |
+| Inverse_Flow vs. Inverse_Air_Flow | +0.9768 |
+| Inverse_Flow vs. Inverse_Hydrogen_Flow | +0.9994 |
+| Inverse_Air_Flow vs. Inverse_Hydrogen_Flow | +0.9755 |
+
+**Finding: the radial structure is a property of the cell and its fixture,
+not of any individual run or flow configuration.** Four independent recording
+sessions, on different days, under four different gas inlet/outlet
+configurations, produce essentially the same spatial template (r ≥ 0.976 in
+every pair, ≥ 0.992 against Normal_Flow). Physically this is consistent with
+a compression/contact-resistance mechanism — clamping pressure falling off
+from a bolt-clamped periphery toward the centre of the active area — which is
+a fixed property of how the cell is assembled and would not be expected to
+change with gas routing. It is not consistent with a reactant-depletion
+gradient, which would have to track the flow path and therefore differ
+between configurations that reverse it.
+
+**Why this claim survives the n=1-per-configuration confound.** Elsewhere in
+this document, the fact that each configuration was recorded in exactly one
+session — with its own pinned steady-state current setpoint — is treated as
+disqualifying, and it rules out any claim that *distinguishes* configurations
+from one another (see the configuration-discrimination thread in the
+README's Open threads). That confound does not apply here, because this is
+the opposite kind of claim: it is about what is **common** across the four
+sessions, not what separates them. Session identity being confounded with
+configuration identity would, if anything, work *against* finding a shared
+template — four independent sessions agreeing to r ≥ 0.976 despite differing
+in both session and configuration is stronger evidence for a fixture-level
+cause, not weaker. The claim made here is only "this structure is present and
+near-identical in all four", which is directly observed.
+
+**Caveats.** All four sessions are the same physical cell in the same test
+fixture, so "property of the cell and fixture" is as far as this generalizes
+— it says nothing about whether other cells, or this cell reassembled with
+different clamping, would show the same template. No independent measurement
+of the actual compression distribution exists in this dataset, so the
+compression mechanism is an interpretation consistent with the observation,
+not a measured cause.
+
+### Does the template vary between sessions? Two states, and an unbreakable confound
+
+The templates are near-identical in *shape* (r ≥ 0.976 above), but that does
+not mean they are identical in every respect. Fitting an identifiable
+three-parameter radial profile to each session
+(`docs/synthetic_generator_notes.md` §6c) separates what varies from what
+doesn't:
+
+| configuration | session date | H₂ routing | centre depth `c` | transition radius `r0` | sharpness `w` |
+|---|---|---|---|---|---|
+| Normal_Flow | 2022-02-09 | normal | 0.1390 | 0.4478 | 0.1123 |
+| Inverse_Air_Flow | 2022-02-11 | normal | 0.1403 | 0.4482 | 0.1131 |
+| Inverse_Flow | 2022-02-17 | reversed | 0.2000 | 0.4273 | 0.1146 |
+| Inverse_Hydrogen_Flow | 2022-02-18 | reversed | 0.2055 | 0.4273 | 0.1142 |
+
+**The transition geometry is fixed; the centre depth is not.** `r0` varies by
+1.05× (CV 2.4%) and `w` by 1.02× (CV 0.8%) across all four — essentially
+constant. `c` varies by **1.48× (CV 18.5%)**, in two tight clusters: ≈0.139
+(within-cluster spread 0.9%) and ≈0.203 (2.8%).
+
+**The clustering is perfectly confounded between two explanations.** The two
+clusters are {Feb 9, Feb 11} and {Feb 17, Feb 18} — which is *simultaneously*
+a split by H₂ routing (normal vs. reversed) and a split by session block (two
+sittings six days apart). Both explanations fit the data exactly and nothing
+in this dataset can separate them:
+
+- *H₂ routing*: reversing hydrogen flow changes how deep the central current
+  depression goes while leaving the frame-driven transition geometry alone.
+- *Assembly/session*: the cell was plausibly disassembled, re-clamped, or the
+  rig otherwise adjusted between the two sittings, changing centre
+  compression while the bolt pattern (hence `r0`, `w`) stayed put.
+
+This is the n=1-per-configuration confound (above) reappearing at a finer
+level. It cannot be resolved without replicate runs of the same configuration
+across sittings, which this dataset does not contain.
+
+**The specific missing experiment.** Naming it so a later reader sees it was
+identified rather than overlooked. The dataset contains:
+
+- no repeat of any routing configuration across the two session blocks, and
+- no session block containing both routings.
+
+Either one alone would break the confound. A second `Normal_Flow` run in the
+Feb 17–18 block would show whether centre depth tracks the sitting (torque /
+assembly) or the routing: if that run's `c` came out near 0.20 it is the
+sitting; near 0.139 it is the routing. Equivalently, an `Inverse_Flow` run in
+the Feb 9–11 block answers the same question from the other side. Neither
+exists, and no amount of reanalysis of the four runs we have can substitute
+for one — the two candidate causes are collinear across every sample in the
+dataset.
+
+**Status of the "clamping torque varies by session" hypothesis: NOT rejected
+— the earlier rejection was an artifact and is withdrawn.** An earlier pass
+fitted a two-parameter power form whose depth parameter turned out to be
+unidentifiable (degenerate across four orders of magnitude,
+`docs/synthetic_generator_notes.md` §6a). That fit showed *zero* spread in
+depth across the four sessions, which was read as evidence against
+session-to-session variation. It was nothing of the kind: an unconstrainable
+parameter shows no spread whether or not the underlying quantity varies.
+Re-fitted with an identifiable form, the depth parameter *does* vary, by
+1.48×. Torque/assembly variation remains a live candidate explanation — tied
+with H₂ routing, and not separable from it here.
+
+This entry is the empirical grounding cited by
+`docs/synthetic_generator_notes.md` §5b/§5f for modelling the synthetic
+healthy baseline as a radial template rather than a flow-path gradient.
+
 ## What this dataset does / doesn't let us claim
 
 **Does let us claim:**
