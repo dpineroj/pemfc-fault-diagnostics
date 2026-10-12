@@ -744,15 +744,15 @@ independent reason that framing does not deliver what it promised.
 materially different template, or a form derived without reference to this
 dataset. Neither is available. The honest scope is the narrow claim above.
 
-### 6g. Proposed bounds — and an asymmetry that should not be smoothed over
+### 6g. ADOPTED bounds — and an asymmetry that must be carried forward
 
-Proposed, not adopted. Stated with what sets each bound and where the real
-sessions fall.
+**Adopted.** Stated with what sets each bound and where the real sessions
+fall inside it.
 
-| parameter | proposed range | what sets it | real sessions |
+| parameter | adopted range | what sets it | where real sessions fall |
 |---|---|---|---|
 | `c` centre floor | **[0.05, 0.60]** | Observed cross-session variation (1.48×, two clusters) gives a measured scale for how much this parameter moves; bracketed to ~3× beyond the observed band in each direction. Upper bound 0.60 is a markedly more uniform cell (max/min ≈ 1.7 against the observed 7–17×); lower bound 0.05 a markedly deeper one. | 0.139, 0.140, 0.200, 0.206 — lower-middle of the range |
-| `r0` transition radius | **[0.25, 0.70]** | Geometry only. Lower: compression falling off close to the centre. Upper: only the outer third affected. No empirical content — see below. | 0.427–0.448 — just below the arithmetic midpoint |
+| `r0` transition radius | **[0.25, 0.70]** | Geometry only. Lower: compression falling off close to the centre. Upper: only the outer third affected. No empirical content — see below. | 0.427–0.448 — slightly below centre of the range, spanning 5% of its width |
 | `w` sharpness | **[0.04, 0.35]** | Shape limits only. Lower: ~3× sharper than observed, approaching a step. Upper: ~3× broader, where the inflection becomes imperceptible and the profile degenerates toward the power-law shapes §6b rejected. No empirical content. | 0.112–0.115 — lower-middle |
 
 **The asymmetry, stated rather than smoothed.** These three bounds are not
@@ -772,14 +772,46 @@ equally grounded and should not be read as though they were:
   supports. A Phase 5 result that depends on `r0`/`w` breadth is resting on
   assumption, and should carry less weight than one that depends on `c`.
 
-**On the midpoint criterion — it is incompatible with symmetric bracketing,
-and no bound here was adjusted to satisfy it.** The criterion (a range whose
-midpoint lands on the real values is suspect) and the bracketing goal (span
-clearly more and clearly less extreme than observed) cannot both hold:
-bracketing symmetrically around an observed band *necessarily* places the
-midpoint on that band. For `c`, the log-midpoint of [0.05, 0.60] is 0.173,
-inside the observed 0.139–0.206. That is an arithmetic consequence of
-bracketing, not evidence of tuning. Skewing the range to move the midpoint
-off the observations would be cosmetic — it would make the family
-asymmetrically wrong in order to look untuned. Reported as-is.
+**The midpoint criterion is RETIRED.** It previously stood as a guard: a
+range whose midpoint lands on the real values was to be treated as suspect.
+It is withdrawn because it is not merely strict, it is **incompatible with
+the bracketing goal it was meant to police**. Bracketing symmetrically around
+an observed band necessarily places the midpoint on that band — for `c`, the
+log-midpoint of [0.05, 0.60] is 0.173, inside the observed 0.139–0.206, as an
+arithmetic consequence rather than as evidence of tuning. Satisfying the
+criterion would require deliberately skewing a range, making the family
+asymmetrically wrong in order to look untuned. That is worse than the problem
+the criterion guards against.
 
+**What replaces it**: state explicitly, for every ranged parameter, where the
+real sessions fall inside the range — the "where real sessions fall" column
+above. A reader can then judge the placement directly instead of trusting a
+summary statistic that cannot distinguish bracketing from fitting.
+
+### 6h. Standing instruction for the Phase 5 writeup
+
+Not a footnote. This must survive to the writeup, so it is recorded as an
+instruction rather than an observation.
+
+**Any Phase 5 finding whose conclusion depends on the breadth of `r0` or `w`
+must be marked, at the point it is stated, as resting on assumed rather than
+observed variability.** The two are not interchangeable:
+
+| parameter | observed cross-session variation | status of its range |
+|---|---|---|
+| `c` | **1.48×** (CV 18.5%, two clusters) | empirically anchored, though the variation is itself confounded between H₂ routing and session block |
+| `r0` | 1.05× (CV 2.4%) | **assumed** — the data fixes a value, not a range |
+| `w` | 1.02× (CV 0.8%) | **assumed** — same |
+
+Concretely, a claim of the form "the model stays quiet across the full
+healthy family" is carrying two different kinds of weight at once: the `c`
+span is a (thin, confounded) empirical scale, while the `r0` and `w` spans
+assert variability **no observation in this dataset supports**. If a Phase 5
+result survives only because the family ranged `r0`/`w` widely, that result is
+a statement about an assumption, not about healthy cells. It should be
+reported as such, and should carry less weight than a result that turns on
+`c`.
+
+The same applies in reverse: if a model *fails* only at extreme `r0`/`w`, that
+failure is also against assumed conditions and should not be over-read as a
+real robustness gap.
