@@ -1141,7 +1141,7 @@ describe, and §5f already scopes them to the superseded point model.
 
 ---
 
-## 10. Standing test: does this artifact hit one arm preferentially?
+## 10. Standing test: does this choice decide the comparison before it is measured?
 
 **A question to ask of every future generator change, not a one-time
 observation.**
@@ -1176,6 +1176,20 @@ errors in spatial structure.
 > result, and the change needs its own justification rather than inheriting
 > the "artifacts cancel" argument.
 
+**The sharper formulation — use this one.** The question above was first
+written with a free win in mind, and that framing is too narrow. Promoted here
+from §11h item 2, where the limitation surfaced:
+
+> **The test is not "does this flatter the hypothesis". It is "does this
+> decide the comparison before it is measured".**
+
+Both failure directions are caught by the second phrasing and only one by the
+first. A generator choice that hands the spatial arm a **guaranteed loss** is
+exactly as corrupting as one handing it a free win, for the same reason — the
+headline comparison follows from the generator's construction rather than from
+the measurement — and a reader asking only "is this flattering?" would wave it
+through.
+
 **Worked example, and the reason this section exists.** With the healthy
 baseline rebased to a radial template while fault states remained on notebook
 01's diagonal gradients, the two classes came from structurally different
@@ -1196,9 +1210,38 @@ run against this, the spatial arm would have scored near-perfectly on a
 feature the bulk arm is blind to, and the project would have confirmed its own
 central hypothesis for entirely the wrong reason.
 
-## 11. Phase 3b scope — fault-state rework onto the radial baseline
+**Worked example in the inverting direction** (§11h item 2, recorded here so
+§10 carries both). Starvation's no-axis arm could have been built as
+*spatially uniform* suppression, `M = 1 − s²A` — the simplest and most
+honest-looking response to not knowing a flow direction. It was rejected. A
+uniform modulation carries **zero spatial information by construction**, so a
+spatially-resolved classifier could not beat a bulk one on it as *arithmetic*
+rather than as a finding. That would have settled §11e branch 3 before Phase 4
+measured anything.
 
-**Not started. This section is scope and acceptance criteria only.**
+Note that this choice is not flattering in the slightest — it hands the
+project's own hypothesis a built-in defeat — and the original phrasing of the
+test would have let it through. The second phrasing catches it immediately.
+
+## 11. Phase 3b — fault-state rework onto the radial baseline
+
+**COMPLETE.** 40 of 41 acceptance checks pass; the single failure was
+pre-registered (§11h) and is recorded as a finding, not a defect (§11i).
+
+**What each subsection settles** — this section is long, so: a map, not a
+summary.
+
+| § | settles |
+|---|---|
+| **11a** | what Phase 3b can claim: coherent and literature-grounded, **never validated** — a permanent limitation, not a gap |
+| **11b** | the acceptance tests, with Test 1 and Test 2's thresholds fixed before implementation and a measured null behind 0.560 |
+| **11c** | the form: multiplicative modulation of the shared healthy template, and each fault's grounding |
+| **11d** | whether a flow-path axis is defensible — measured, and resolved as fixture-locked, not flow-locked |
+| **11e** | how Phase 4 must interpret starvation's result, in three branches fixed in advance |
+| **11f** | the internal-consistency checks that substitute for the validation that does not exist |
+| **11g** | the severity convexity exponent, and the chronology of adopting it after a test failure |
+| **11h** | starvation's two arms, pre-registered, including the predicted Test 3 failure |
+| **11i** | the result, what it is not, what Phase 4 inherits, and the one threshold with weaker provenance |
 
 ### 11a. What Phase 3b can and cannot claim — a permanent limitation
 
@@ -2092,17 +2135,36 @@ is 0.970. So:
 > width 0.302. The adopted 0.95 sits inside it with 0.282 of margin below and
 > 0.020 above.
 
-**The dependence is therefore weak, but not symmetric, and the asymmetry is
-worth seeing.** Nothing in the band's lower two-thirds changes anything: the
-failing pair would still fail at any threshold above 0.667. The upper edge is
-tighter — at T > 0.970 drying–flooding begins to fail too, which would change
-the conclusion from "one pair collapsed" to "Test 3 is failing broadly". 0.95
-is 0.020 from that edge, so a threshold of 0.98 would have told a different
-story.
+**The dependence is therefore weak, but not symmetric.** Nothing in the band's
+lower two-thirds changes anything: the failing pair would still fail at any
+threshold above 0.667. **The upper edge is where the real content is**, and it
+deserves more weight than a parenthetical.
 
-That is the honest shape of it: the result is robust across a wide band, the
-adopted value is not centred in that band, and both facts are now on the
-record rather than resting on an assurance that the threshold did not matter.
+> **drying–flooding is marginal under any reading, on BOTH arms.** It measures
+> **0.968–0.976**, i.e. within **0.03** of its own failure point, and it is the
+> binding pair at the top of the band. At any threshold T > 0.970 it fails on
+> the directional arm *and* the no-axis arm, which converts Phase 3b's result
+> from **"one pair collapsed on one arm"** into **"Test 3 is failing broadly
+> across both arms"** — a materially different conclusion about the whole
+> rework, not a stricter grading of the same one.
+>
+> So §11i item 1's presentation of drying–flooding as a clean pass is **true
+> only relative to the adopted 0.95**. At 0.98 it would read as a failure. The
+> 0.638 result is robust; the *drying–flooding* result is not.
+
+**Phase 4 inherits this as a known soft spot and should not rediscover it.**
+The pair that §11c predicted would separate most cleanly — opposite radial
+signs, the expectation the whole no-axis decision rests on (§11d DECISION) —
+is in practice the *least* comfortable margin in Test 3. Two consequences
+worth carrying forward: any Phase 4 difficulty separating drying from flooding
+should be read against this margin rather than attributed to the classifier,
+and any future tightening of Test 3's threshold must be understood as putting
+drying–flooding, not starvation, first in the line of fire.
+
+That is the honest shape of it: the 0.638 finding is robust across a wide
+band, the adopted threshold is not centred in that band, the pair nearest the
+edge is the one §11c was most confident about, and all of it is on the record
+rather than resting on an assurance that the threshold did not matter.
 
 **Asymmetry with §11b, stated plainly**: Test 1's 0.02 / 0.002 / nine-point
 grid and Test 2's 0.560 at N = 1000 were pre-registered in the design document
