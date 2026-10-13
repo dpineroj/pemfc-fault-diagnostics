@@ -91,6 +91,16 @@ no-false-alarm check, which is Phase 5 below.
   PROGRESS**, uncommitted. Closing the gap between synthetic and real
   healthy CV(J) with a physically-grounded (not fit-to-real-data) spatial
   model — see `docs/synthetic_generator_notes.md`.
+- **Phase 3b — Fault-state spatial pattern rework**: rebase the fault
+  patterns onto the radial healthy baseline, with the same treatment the
+  healthy form received (literature grounding, capability check,
+  identifiability check, honest statement of data-dependence). **NOT
+  STARTED**, not scoped in detail, explicitly after notebook 03. Required
+  because notebook 01's fault patterns were designed as modifications of a
+  *diagonal flow-path gradient*; rebasing the interpolation's start point
+  without re-examining its endpoints would produce a trajectory between two
+  points never designed to connect — see
+  `docs/synthetic_generator_notes.md` §8.
 - **Phase 4 — Fault classification models**: a snapshot spatial-vs-bulk
   classifier, and a sequence-based (LSTM) predictive/precursor model. **NOT
   STARTED.**

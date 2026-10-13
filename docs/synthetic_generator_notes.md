@@ -983,3 +983,47 @@ Two things follow, neither of which is acted on here:
    Recorded as a property to state in the writeup, not a defect pending
    correction.
 
+
+## 8. Healthy family implemented; fault states deliberately left on the old baseline
+
+The adopted family (Sec. 6c, bounds Sec. 6g) is now the default severity=0
+path in `fault_generator.py` — `generate_healthy_grid_v3`, selected via
+`generate_labeled_run(healthy_model="logistic")`. The legacy notebook 01
+gradient stays reachable as `healthy_model="notebook01"`;
+`generate_healthy_grid_v2` and the frozen `generate_normal_grid` are
+unchanged.
+
+**Fault-state spatial patterns were NOT rebased onto the new baseline, and
+this is a deliberate choice rather than deferred work.**
+
+The reason is not merely scope. Notebook 01's fault patterns were *designed as
+modifications of a diagonal flow-path gradient*: flooding suppresses the
+cathode-outlet corner of that gradient, drying shifts weight toward the H₂
+inlet along it, starvation collapses it along the cathode flow path. Each
+endpoint is defined relative to the gradient it modifies.
+
+Rebasing only the interpolation's *start* point — swapping healthy from the
+diagonal gradient to the radial template while leaving those endpoints
+untouched — would not produce "faults on a better baseline". It would produce
+a **trajectory between two points never designed to connect**: a severity
+sweep from a radial bowl toward a pattern constructed as a perturbation of a
+diagonal gradient. The intermediate severities would be geometrically
+arbitrary. Flooding is the clearest case, since its defining feature is a
+corner suppression that only means anything relative to a flow-path gradient.
+
+Such output would look plausible — smooth, continuous, severity-ordered — while
+being unjustified at every intermediate point. **An openly inconsistent
+generator is better than a plausible-looking unjustified one**, because the
+first can be reported and reasoned about and the second quietly contaminates
+anything built on it.
+
+**Consequence to state wherever this generator's output is shown**: the
+healthy baseline is the adopted radial family; the fault states are still the
+superseded diagonal-gradient interpolation. These rest on different
+foundations. Fault-state spatial patterns from this generator are **not
+validated output** and must not be read as such.
+
+**Phase 3b** (see README) covers the fault-state rework, with the same
+treatment the healthy form received: literature grounding, capability check,
+identifiability check, and an honest statement of data-dependence. Not
+started, not scoped in detail, and explicitly after notebook 03.

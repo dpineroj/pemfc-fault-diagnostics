@@ -204,6 +204,40 @@ RADIAL_EDGE_RATIO = 2.0
 # here as a realism add-on, not a calibrated quantity.
 TEMPORAL_SUBORDINATION_FACTOR = 15.0
 
+# ---------------------------------------------------------------------------
+# ADOPTED healthy family (docs/synthetic_generator_notes.md Sec. 6c, bounds
+# Sec. 6g). Supersedes the v2 form above for the severity=0 path; v2 itself is
+# kept unchanged rather than deleted, same as every other superseded artifact
+# in this project.
+#
+# Form:  g     = [sig((rho-r0)/w) - sig(-r0/w)] / [sig((1-r0)/w) - sig(-r0/w)]
+#        S_raw = c + (1-c)*g        so S_raw(0)=c, S_raw(r_max)=1 exactly
+#        S     = S_raw / mean(S_raw)
+#
+# Chosen because the real templates inflect and saturate (Sec. 6b) -- a
+# data-dependence stated plainly in Sec. 6d and NOT to be softened. The
+# physical picture (a bolted frame saturating at both limits) motivates the
+# shape; it does not derive it, and it fixes neither r0 nor w.
+#
+# Bounds below are ADOPTED (Sec. 6g). Asymmetry that must be carried forward
+# (Sec. 6h): c has thin but real empirical content (1.48x observed
+# cross-session variation, itself confounded); r0 and w are fixed to within 5%
+# and 2% in every session available, so their ranges are ASSUMED, not
+# observed. Any downstream finding depending on r0/w breadth must be reported
+# as resting on assumption.
+HEALTHY_C_RANGE = (0.05, 0.60)
+HEALTHY_R0_RANGE = (0.25, 0.70)
+HEALTHY_W_RANGE = (0.04, 0.35)
+HEALTHY_TEMPORAL_RATIO_RANGE = (8.0, 60.0)
+
+# Sampling is UNIFORM over these ranges, by decision, not oversight
+# (Sec. 7d). It skews the family toward cells more spatially uniform than any
+# observed (78% below the real minimum, 11% above the real maximum). That
+# direction makes false-alarm avoidance HARDER, not easier, so a model that
+# stays quiet across this family makes a stronger claim than one validated on
+# a family centred on the real data. Log-uniform sampling of c would shift
+# mass toward the real end and weaken the test; it is rejected for that reason.
+
 
 def _radial_healthy_shape(edge_ratio: float = RADIAL_EDGE_RATIO) -> np.ndarray:
     """
@@ -244,6 +278,68 @@ def generate_healthy_grid_v2(load_level: float = 0.697, seed: int = 0, edge_rati
     rng = np.random.default_rng(seed)
     S = _radial_healthy_shape(edge_ratio)
     sigma_temporal = S.std() / TEMPORAL_SUBORDINATION_FACTOR
+    noise = rng.normal(0, sigma_temporal, S.shape)
+    return load_level * S * (1.0 + noise)
+
+
+def _logistic(x: np.ndarray) -> np.ndarray:
+    return 1.0 / (1.0 + np.exp(-np.clip(x, -500.0, 500.0)))
+
+
+def logistic_healthy_shape(c: float, r0: float, w: float,
+                           rows: int = ROWS, cols: int = COLS) -> np.ndarray:
+    """
+    Persistent healthy spatial template -- the ADOPTED form (Sec. 6c).
+
+    Normalized to mean 1, so it carries NO load information and CV(J) stays
+    load-invariant by construction, exactly as in v2.
+
+    NOTE (Sec. 7c): the continuous field is resolution-independent by
+    construction (it depends only on rho = r/r_max), but CV(J) computed on it
+    is NOT -- it is a sample statistic over a resolution-dependent sampling of
+    radius. Measured paired ratio 18x18/4x4 is 1.12 on average, up to 2.9x for
+    sharp transitions near the centre (small w, small r0). Grid size therefore
+    matters and must be stated wherever CV(J) from this form is reported.
+    """
+    row_idx, col_idx = np.indices((rows, cols))
+    r = np.sqrt((row_idx - (rows - 1) / 2.0) ** 2 + (col_idx - (cols - 1) / 2.0) ** 2)
+    rho = r / r.max()
+    w = max(float(w), 1e-4)
+    lo, hi = _logistic(-r0 / w), _logistic((1.0 - r0) / w)
+    g = (_logistic((rho - r0) / w) - lo) / (hi - lo)
+    raw = c + (1.0 - c) * g
+    return raw / raw.mean()
+
+
+def sample_healthy_params(rng: np.random.Generator) -> dict:
+    """
+    Draw ONE simulated cell's healthy parameters, uniform over the adopted
+    ranges. Drawn once per run, not per timestep: the real template is
+    persistent (99.6% of spatial variance is static, Sec. 5a), so a template
+    that changed every timestep would contradict the structure being modelled.
+    """
+    return {
+        "c": float(rng.uniform(*HEALTHY_C_RANGE)),
+        "r0": float(rng.uniform(*HEALTHY_R0_RANGE)),
+        "w": float(rng.uniform(*HEALTHY_W_RANGE)),
+        "temporal_ratio": float(rng.uniform(*HEALTHY_TEMPORAL_RATIO_RANGE)),
+    }
+
+
+def generate_healthy_grid_v3(params: dict, seed: int, load_level: float = 0.697,
+                             rows: int = ROWS, cols: int = COLS) -> np.ndarray:
+    """
+    One timestep of a healthy grid for the cell described by `params`.
+
+    The template is fixed by `params` (persistent); only the temporal noise
+    varies with `seed`. `load_level` keeps the same 0.697 default as v2 and
+    generate_normal_grid so that swapping the healthy model changes the grid
+    SHAPE only, not its mean -- which is what makes the swap's effect
+    attributable.
+    """
+    rng = np.random.default_rng(seed)
+    S = logistic_healthy_shape(params["c"], params["r0"], params["w"], rows, cols)
+    sigma_temporal = S.std() / params["temporal_ratio"]
     noise = rng.normal(0, sigma_temporal, S.shape)
     return load_level * S * (1.0 + noise)
 
@@ -316,9 +412,22 @@ _GRID_GENERATORS = {
 }
 
 
-def generate_current_grid(fault_type: str | None, severity: float, seed: int) -> np.ndarray:
+def generate_current_grid(fault_type: str | None, severity: float, seed: int,
+                          healthy_params: dict | None = None) -> np.ndarray:
+    """
+    `healthy_params` selects the severity=0 path:
+      dict  -> adopted logistic family (generate_healthy_grid_v3)
+      None  -> legacy notebook 01 form (generate_normal_grid), kept reachable
+
+    Fault-state paths are UNCHANGED either way. They still interpolate from
+    notebook 01's diagonal flow-path gradient, which the radial finding
+    (Sec. 5b) supersedes for the healthy baseline. Rebasing them is Phase 3b
+    and is deliberately not done here -- see Sec. 8.
+    """
     if fault_type is None or severity <= 0:
-        return generate_normal_grid(seed)
+        if healthy_params is None:
+            return generate_normal_grid(seed)
+        return generate_healthy_grid_v3(healthy_params, seed)
     return _GRID_GENERATORS[fault_type](severity, seed)
 
 
@@ -689,8 +798,17 @@ def _install_episode(
 # Full labeled run
 # ---------------------------------------------------------------------------
 
-def generate_labeled_run(trace_path: str | None = None, base_seed: int = BASE_SEED) -> dict:
+def generate_labeled_run(trace_path: str | None = None, base_seed: int = BASE_SEED,
+                         healthy_model: str = "logistic") -> dict:
     """
+    `healthy_model` selects the severity=0 spatial template:
+      "logistic"   -- ADOPTED family (Sec. 6c/6g), default
+      "notebook01" -- legacy diagonal flow-path gradient, superseded by the
+                      radial finding (Sec. 5b) but kept reachable
+
+    Fault-state patterns are unaffected by this switch; they still interpolate
+    from notebook 01's gradient pending Phase 3b (Sec. 8).
+
     Loads the real dynamic-only load trace and produces a full labeled
     synthetic run: for every timestep, a (current_grid, temp_grid,
     active_fault_type_or_none, severity, onset_field_s, cv_j,
@@ -720,6 +838,18 @@ def generate_labeled_run(trace_path: str | None = None, base_seed: int = BASE_SE
     no-carryover logic is wrong, but because the concatenation itself isn't
     physically continuous there.
     """
+    if healthy_model not in ("logistic", "notebook01"):
+        raise ValueError(f"healthy_model must be 'logistic' or 'notebook01', got {healthy_model!r}")
+
+    # Drawn from a SEPARATE stream, deliberately: the episode RNG below must
+    # produce an identical sequence under either healthy_model, so that
+    # swapping the healthy baseline cannot perturb fault-episode parameters.
+    # That isolation is what makes the acceptance test meaningful.
+    healthy_params = (
+        sample_healthy_params(np.random.default_rng(base_seed + 100003))
+        if healthy_model == "logistic" else None
+    )
+
     if trace_path is None:
         trace_path = DEFAULT_TRACE_PATH
     d = np.load(trace_path)
@@ -785,7 +915,7 @@ def generate_labeled_run(trace_path: str | None = None, base_seed: int = BASE_SE
     cv_j = np.empty(n, dtype=float)
     for i in range(n):
         ft, sev = fault_type[i], severity[i]
-        cg = generate_current_grid(ft, sev, seed=base_seed + i)
+        cg = generate_current_grid(ft, sev, seed=base_seed + i, healthy_params=healthy_params)
         tg = generate_temperature_grid(cg, ft, sev, seed=base_seed + i)
         current_grids[i] = cg
         temp_grids[i] = tg
@@ -805,6 +935,8 @@ def generate_labeled_run(trace_path: str | None = None, base_seed: int = BASE_SE
         "cv_j": cv_j,
         "near_seam_buffer": near_seam_buffer,
         "episodes": all_episodes,
+        "healthy_model": healthy_model,
+        "healthy_params": healthy_params,
     }
 
 
