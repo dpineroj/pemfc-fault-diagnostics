@@ -81,7 +81,19 @@ FIGURES_DIR = os.path.join(PROJECT_ROOT, "figures")
 
 DEFAULT_TRACE_PATH = os.path.join(PROCESSED_DIR, "normal_flow_fc-dlc_load_trace_dynamic_only.npz")
 
-ROWS, COLS = 4, 4  # notebook 01's grid convention
+ROWS, COLS = 4, 4  # notebook 01's grid convention -- the FROZEN default
+
+# Native resolution for generated runs. 4x4 was a vestige of an abandoned PCB
+# hardware design; 18x18 matches the real validation data natively, which
+# matters because CV(J) computed on this family is resolution-dependent
+# (Sec. 7c: paired 18x18/4x4 ratio 1.12 on average, up to 2.9x for sharp
+# transitions near the centre). Generating at the validation resolution
+# removes that class of error entirely.
+#
+# Every grid function below still DEFAULTS to ROWS/COLS = 4x4 when called
+# directly, so the frozen path, the v2 regression test, and any existing
+# direct call are byte-for-byte unaffected. Only generate_labeled_run opts in.
+DEFAULT_GRID_SHAPE = (18, 18)
 
 # Trigger thresholds -- lifted directly from extract_load_trace.py's
 # dynamic-only-trace report, not re-derived here.
@@ -114,14 +126,22 @@ FAULT_COLORS = {"starvation": "#d7191c", "flooding": "#2166ac", "drying": "#e082
 # Spatial grid generators -- continuous-by-severity, grounded in notebook 01
 # ---------------------------------------------------------------------------
 
-def generate_normal_grid(seed: int) -> np.ndarray:
-    """Verbatim notebook 01 `generate_normal` (cell 899e7d48), reseeded per call."""
+def generate_normal_grid(seed: int, rows: int = ROWS, cols: int = COLS) -> np.ndarray:
+    """
+    Verbatim notebook 01 `generate_normal` (cell 899e7d48), reseeded per call.
+
+    FROZEN at the 4x4 default: generate_normal_grid(seed) must stay
+    byte-identical to notebook 01 forever, and that is asserted in the tests.
+    Larger rows/cols evaluate the same formula at finer resolution -- a
+    generalization of the formula, NOT notebook 01's output, and not covered
+    by the frozen contract.
+    """
     rng = np.random.default_rng(seed)
-    row_grad = np.linspace(1.0, 0.65, ROWS)
-    col_grad = np.linspace(1.0, 0.72, COLS)
+    row_grad = np.linspace(1.0, 0.65, rows)
+    col_grad = np.linspace(1.0, 0.72, cols)
     gradient = np.outer(row_grad, col_grad)
     base = 0.45 + 0.35 * gradient
-    noise = rng.normal(0, 0.02, (ROWS, COLS))
+    noise = rng.normal(0, 0.02, (rows, cols))
     return np.clip(base + noise, 0.30, 0.90)
 
 
@@ -239,7 +259,8 @@ HEALTHY_TEMPORAL_RATIO_RANGE = (8.0, 60.0)
 # mass toward the real end and weaken the test; it is rejected for that reason.
 
 
-def _radial_healthy_shape(edge_ratio: float = RADIAL_EDGE_RATIO) -> np.ndarray:
+def _radial_healthy_shape(edge_ratio: float = RADIAL_EDGE_RATIO,
+                          rows: int = ROWS, cols: int = COLS) -> np.ndarray:
     """
     Persistent (static) normalized spatial shape S(i,j), mean 1 over the
     grid -- quadratic falloff in distance from grid center
@@ -250,8 +271,8 @@ def _radial_healthy_shape(edge_ratio: float = RADIAL_EDGE_RATIO) -> np.ndarray:
     `edge_ratio` -- a known, stated consequence of the coarser (4x4 vs.
     real 18x18) discretization, not a separate free parameter.
     """
-    row_idx, col_idx = np.indices((ROWS, COLS))
-    center_r, center_c = (ROWS - 1) / 2.0, (COLS - 1) / 2.0
+    row_idx, col_idx = np.indices((rows, cols))
+    center_r, center_c = (rows - 1) / 2.0, (cols - 1) / 2.0
     r = np.sqrt((row_idx - center_r) ** 2 + (col_idx - center_c) ** 2)
     r_max = r.max()
     a_edge = edge_ratio - 1.0
@@ -259,7 +280,9 @@ def _radial_healthy_shape(edge_ratio: float = RADIAL_EDGE_RATIO) -> np.ndarray:
     return s_raw / s_raw.mean()  # renormalize -> shape only (mean=1), carries no load information
 
 
-def generate_healthy_grid_v2(load_level: float = 0.697, seed: int = 0, edge_ratio: float = RADIAL_EDGE_RATIO) -> np.ndarray:
+def generate_healthy_grid_v2(load_level: float = 0.697, seed: int = 0,
+                             edge_ratio: float = RADIAL_EDGE_RATIO,
+                             rows: int = ROWS, cols: int = COLS) -> np.ndarray:
     """
     Phase 3 healthy spatial-structure model (additive -- see section header
     above). J(i,j) = load_level * S(i,j) * (1 + noise(i,j)).
@@ -276,7 +299,7 @@ def generate_healthy_grid_v2(load_level: float = 0.697, seed: int = 0, edge_rati
     validation script / docs/synthetic_generator_notes.md.
     """
     rng = np.random.default_rng(seed)
-    S = _radial_healthy_shape(edge_ratio)
+    S = _radial_healthy_shape(edge_ratio, rows, cols)
     sigma_temporal = S.std() / TEMPORAL_SUBORDINATION_FACTOR
     noise = rng.normal(0, sigma_temporal, S.shape)
     return load_level * S * (1.0 + noise)
@@ -344,7 +367,8 @@ def generate_healthy_grid_v3(params: dict, seed: int, load_level: float = 0.697,
     return load_level * S * (1.0 + noise)
 
 
-def generate_starvation_grid(severity: float, seed: int) -> np.ndarray:
+def generate_starvation_grid(severity: float, seed: int,
+                         rows: int = ROWS, cols: int = COLS) -> np.ndarray:
     """
     O2 starvation, continuous. Interpolates NORMAL's row/col gradient, base
     range, and clip bounds toward notebook 01's `generate_starvation` (cell
@@ -354,19 +378,20 @@ def generate_starvation_grid(severity: float, seed: int) -> np.ndarray:
     """
     severity = float(np.clip(severity, 0.0, 1.0))
     rng = np.random.default_rng(seed)
-    row_grad = (1 - severity) * np.linspace(1.0, 0.65, ROWS) + severity * np.linspace(0.95, 1.0, ROWS)
-    col_grad = (1 - severity) * np.linspace(1.0, 0.72, COLS) + severity * np.linspace(1.0, 0.04, COLS)
+    row_grad = (1 - severity) * np.linspace(1.0, 0.65, rows) + severity * np.linspace(0.95, 1.0, rows)
+    col_grad = (1 - severity) * np.linspace(1.0, 0.72, cols) + severity * np.linspace(1.0, 0.04, cols)
     gradient = np.outer(row_grad, col_grad)
     base_lo = (1 - severity) * 0.45 + severity * 0.04
     base_scale = (1 - severity) * 0.35 + severity * 0.62
     base = base_lo + base_scale * gradient
-    noise = rng.normal(0, 0.02, (ROWS, COLS))
+    noise = rng.normal(0, 0.02, (rows, cols))
     clip_lo = (1 - severity) * 0.30 + severity * 0.0
     clip_hi = (1 - severity) * 0.90 + severity * 0.75
     return np.clip(base + noise, clip_lo, clip_hi)
 
 
-def generate_flooding_grid(severity: float, seed: int) -> np.ndarray:
+def generate_flooding_grid(severity: float, seed: int,
+                         rows: int = ROWS, cols: int = COLS) -> np.ndarray:
     """
     Flooding, continuous. Interpolates toward notebook 01's
     `generate_flooding` (cell 899e7d48), including the bottom-right water-
@@ -374,32 +399,33 @@ def generate_flooding_grid(severity: float, seed: int) -> np.ndarray:
     """
     severity = float(np.clip(severity, 0.0, 1.0))
     rng = np.random.default_rng(seed)
-    row_grad = (1 - severity) * np.linspace(1.0, 0.65, ROWS) + severity * np.linspace(1.0, 0.82, ROWS)
-    col_grad = (1 - severity) * np.linspace(1.0, 0.72, COLS) + severity * np.linspace(1.0, 0.87, COLS)
+    row_grad = (1 - severity) * np.linspace(1.0, 0.65, rows) + severity * np.linspace(1.0, 0.82, rows)
+    col_grad = (1 - severity) * np.linspace(1.0, 0.72, cols) + severity * np.linspace(1.0, 0.87, cols)
     gradient = np.outer(row_grad, col_grad)
     base_lo = (1 - severity) * 0.45 + severity * 0.28
     base_scale = (1 - severity) * 0.35 + severity * 0.20
     base = base_lo + base_scale * gradient
-    suppression = np.zeros((ROWS, COLS))
+    suppression = np.zeros((rows, cols))
     suppression[2:, 2:] = 0.07 * severity
     noise_std = (1 - severity) * 0.02 + severity * 0.012
-    noise = rng.normal(0, noise_std, (ROWS, COLS))
+    noise = rng.normal(0, noise_std, (rows, cols))
     clip_lo = (1 - severity) * 0.30 + severity * 0.10
     clip_hi = (1 - severity) * 0.90 + severity * 0.58
     return np.clip(base - suppression + noise, clip_lo, clip_hi)
 
 
-def generate_drying_grid(severity: float, seed: int) -> np.ndarray:
+def generate_drying_grid(severity: float, seed: int,
+                         rows: int = ROWS, cols: int = COLS) -> np.ndarray:
     """Drying, continuous. Interpolates toward notebook 01's `generate_drying` (cell 899e7d48)."""
     severity = float(np.clip(severity, 0.0, 1.0))
     rng = np.random.default_rng(seed)
-    row_grad = (1 - severity) * np.linspace(1.0, 0.65, ROWS) + severity * np.linspace(1.0, 0.42, ROWS)
-    col_grad = (1 - severity) * np.linspace(1.0, 0.72, COLS) + severity * np.linspace(1.0, 0.38, COLS)
+    row_grad = (1 - severity) * np.linspace(1.0, 0.65, rows) + severity * np.linspace(1.0, 0.42, rows)
+    col_grad = (1 - severity) * np.linspace(1.0, 0.72, cols) + severity * np.linspace(1.0, 0.38, cols)
     gradient = np.outer(row_grad, col_grad)
     base_lo = (1 - severity) * 0.45 + severity * 0.08
     base_scale = (1 - severity) * 0.35 + severity * 0.52
     base = base_lo + base_scale * gradient
-    noise = rng.normal(0, 0.02, (ROWS, COLS))
+    noise = rng.normal(0, 0.02, (rows, cols))
     clip_lo = (1 - severity) * 0.30 + severity * 0.04
     clip_hi = (1 - severity) * 0.90 + severity * 0.68
     return np.clip(base + noise, clip_lo, clip_hi)
@@ -413,7 +439,8 @@ _GRID_GENERATORS = {
 
 
 def generate_current_grid(fault_type: str | None, severity: float, seed: int,
-                          healthy_params: dict | None = None) -> np.ndarray:
+                          healthy_params: dict | None = None,
+                          rows: int = ROWS, cols: int = COLS) -> np.ndarray:
     """
     `healthy_params` selects the severity=0 path:
       dict  -> adopted logistic family (generate_healthy_grid_v3)
@@ -426,9 +453,9 @@ def generate_current_grid(fault_type: str | None, severity: float, seed: int,
     """
     if fault_type is None or severity <= 0:
         if healthy_params is None:
-            return generate_normal_grid(seed)
-        return generate_healthy_grid_v3(healthy_params, seed)
-    return _GRID_GENERATORS[fault_type](severity, seed)
+            return generate_normal_grid(seed, rows, cols)
+        return generate_healthy_grid_v3(healthy_params, seed, rows=rows, cols=cols)
+    return _GRID_GENERATORS[fault_type](severity, seed, rows, cols)
 
 
 def generate_temperature_grid(current_grid: np.ndarray, fault_type: str | None, severity: float, seed: int) -> np.ndarray:
@@ -440,8 +467,17 @@ def generate_temperature_grid(current_grid: np.ndarray, fault_type: str | None, 
     """
     severity = float(np.clip(severity, 0.0, 1.0)) if fault_type else 0.0
     rng = np.random.default_rng(seed + 100)
-    row_center = np.array([0.85, 1.0, 1.0, 0.85])
-    col_center = np.array([0.88, 1.0, 1.0, 0.88])
+    t_rows, t_cols = current_grid.shape
+
+    # Notebook 01 hardcodes these as 4-element profiles (edge segments cooler
+    # via heat-sinking at the clamping plates). Interpolating them onto the
+    # actual grid size reproduces the original arrays EXACTLY at 4x4 and
+    # generalizes smoothly above it -- the alternative, leaving them as fixed
+    # 4-vectors, simply fails to broadcast at any other resolution.
+    row_center = np.interp(np.linspace(0, 1, t_rows), np.linspace(0, 1, 4),
+                           np.array([0.85, 1.0, 1.0, 0.85]))
+    col_center = np.interp(np.linspace(0, 1, t_cols), np.linspace(0, 1, 4),
+                           np.array([0.88, 1.0, 1.0, 0.88]))
     center_bias = np.outer(row_center, col_center)
     j_norm = current_grid / 0.80
 
@@ -458,8 +494,15 @@ def generate_temperature_grid(current_grid: np.ndarray, fault_type: str | None, 
     j_scale = (1 - severity) * normal_params[2] + severity * target[2]
 
     temp = base_t + center_scale * center_bias + j_scale * j_norm
-    noise = rng.normal(0, 0.4, (ROWS, COLS))
-    return gaussian_filter(temp + noise, sigma=0.8)
+    noise = rng.normal(0, 0.4, (t_rows, t_cols))
+    # sigma is a smoothing LENGTH, so it must scale with resolution to keep its
+    # physical meaning: notebook 01's sigma=0.8 on a 4x4 grid is 0.2 of the grid
+    # width. Holding 0.8 cells fixed at 18x18 would silently leave the
+    # temperature field nearly unsmoothed -- a behaviour change disguised as a
+    # resolution change. Exactly 0.8 at 4x4, so frozen-resolution output is
+    # unaffected.
+    sigma = 0.8 * (max(t_rows, t_cols) / 4.0)
+    return gaussian_filter(temp + noise, sigma=sigma)
 
 
 # ---------------------------------------------------------------------------
@@ -799,8 +842,14 @@ def _install_episode(
 # ---------------------------------------------------------------------------
 
 def generate_labeled_run(trace_path: str | None = None, base_seed: int = BASE_SEED,
-                         healthy_model: str = "logistic") -> dict:
+                         healthy_model: str = "logistic",
+                         grid_shape: tuple[int, int] = DEFAULT_GRID_SHAPE) -> dict:
     """
+    `grid_shape` sets the generated resolution, defaulting to 18x18 to match
+    the real validation data natively. CV(J) from this family is
+    resolution-dependent (Sec. 7c), so grid size must be stated wherever its
+    CV(J) is reported. 4x4 stays reachable via grid_shape=(4, 4).
+
     `healthy_model` selects the severity=0 spatial template:
       "logistic"   -- ADOPTED family (Sec. 6c/6g), default
       "notebook01" -- legacy diagonal flow-path gradient, superseded by the
@@ -838,6 +887,8 @@ def generate_labeled_run(trace_path: str | None = None, base_seed: int = BASE_SE
     no-carryover logic is wrong, but because the concatenation itself isn't
     physically continuous there.
     """
+    grid_rows, grid_cols = int(grid_shape[0]), int(grid_shape[1])
+
     if healthy_model not in ("logistic", "notebook01"):
         raise ValueError(f"healthy_model must be 'logistic' or 'notebook01', got {healthy_model!r}")
 
@@ -910,12 +961,13 @@ def generate_labeled_run(trace_path: str | None = None, base_seed: int = BASE_SE
             ep["episode_duration_s"] = ep["episode_end_s"] - ep["onset_start_s"]
             all_episodes.append(ep)
 
-    current_grids = np.empty((n, ROWS, COLS), dtype=np.float64)
-    temp_grids = np.empty((n, ROWS, COLS), dtype=np.float64)
+    current_grids = np.empty((n, grid_rows, grid_cols), dtype=np.float64)
+    temp_grids = np.empty((n, grid_rows, grid_cols), dtype=np.float64)
     cv_j = np.empty(n, dtype=float)
     for i in range(n):
         ft, sev = fault_type[i], severity[i]
-        cg = generate_current_grid(ft, sev, seed=base_seed + i, healthy_params=healthy_params)
+        cg = generate_current_grid(ft, sev, seed=base_seed + i, healthy_params=healthy_params,
+                                   rows=grid_rows, cols=grid_cols)
         tg = generate_temperature_grid(cg, ft, sev, seed=base_seed + i)
         current_grids[i] = cg
         temp_grids[i] = tg
@@ -935,6 +987,7 @@ def generate_labeled_run(trace_path: str | None = None, base_seed: int = BASE_SE
         "cv_j": cv_j,
         "near_seam_buffer": near_seam_buffer,
         "episodes": all_episodes,
+        "grid_shape": (grid_rows, grid_cols),
         "healthy_model": healthy_model,
         "healthy_params": healthy_params,
     }

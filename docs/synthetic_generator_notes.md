@@ -1027,3 +1027,77 @@ validated output** and must not be read as such.
 treatment the healthy form received: literature grounding, capability check,
 identifiability check, and an honest statement of data-dependence. Not
 started, not scoped in detail, and explicitly after notebook 03.
+
+## 9. Native resolution moved to 18×18
+
+`generate_labeled_run` now defaults to `grid_shape=(18, 18)`, matching the
+real validation data natively. 4×4 stays reachable via `grid_shape=(4, 4)`.
+Every grid function still *defaults* to 4×4 when called directly, so the
+frozen path, the v2 regression test, and any existing direct call are
+byte-for-byte unaffected — only `generate_labeled_run` opts in.
+
+Why: CV(J) from this family is resolution-dependent (§7c), by up to 2.9× for
+sharp transitions near the centre. Generating at the validation resolution
+removes that error class rather than correcting for it afterwards.
+
+**Acceptance (both resolutions, all passing):** frozen `generate_normal_grid`
+byte-identical to notebook 01 at its 4×4 default across four seeds; the v2
+regression test unchanged; the temperature grid byte-identical at 4×4 to the
+pre-change formula; load-invariance exact at both resolutions (spread 0.00 at
+18×18, 5.6e-17 at 4×4); and episode counts **34/24/9 with bit-identical
+severity_targets across all four combinations** of {notebook01, logistic} ×
+{4×4, 18×18} — grid resolution touches the episode stream no more than the
+healthy-model choice did, verified rather than assumed.
+
+**Two generalizations were required and are not pure parameterization**, so
+they are called out rather than buried:
+
+1. *Temperature centre-bias.* Notebook 01 hardcodes 4-element profiles
+   (`[0.85, 1.0, 1.0, 0.85]`). These are interpolated onto the actual grid
+   size — reproducing the original arrays exactly at 4×4 and generalizing
+   above it. Leaving them as fixed 4-vectors simply fails to broadcast.
+2. *Temperature smoothing σ.* σ is a smoothing *length*, so it scales with
+   resolution (`0.8 × N/4`) to keep its physical meaning. Holding 0.8 cells
+   fixed would leave the 18×18 temperature field nearly unsmoothed — a
+   behaviour change disguised as a resolution change. Exactly 0.8 at 4×4.
+
+Both touch the temperature model, which is otherwise Phase 3b's business.
+They are included here because the alternative is silently different
+behaviour at the new default, not because fault-state rework has begun.
+**Consequence for Phase 3b: it inherits a partially-generalized temperature
+path, not an untouched one** — the centre-bias profile and the smoothing
+length are already resolution-aware, while every other temperature constant
+(the per-state `base_t`/`center_scale`/`j_scale` triples) remains
+notebook-01-derived and untouched. Recorded so it does not have to be
+rediscovered.
+
+### 9a. SUPERSEDED — the 0.1719 run-level figure from Sec. 8
+
+> ~~Run-level healthy CV(J) moves 0.0762 → **0.1719** under the adopted
+> family.~~
+
+**That figure was 4×4-only and must not be carried forward as "the healthy
+baseline's CV(J)".** It is exactly the kind of number that gets quoted later
+without its resolution attached. The same run, same drawn cell
+(`c=0.2290, r0=0.3235, w=0.0689`), at the new 18×18 default reports
+**0.2499** — a 1.45× difference arising purely from grid resolution, because
+that cell sits in the sharp-transition-near-centre corner §7c identified.
+
+**Any CV(J) from this family must be stated with its grid size.** A bare
+CV(J) number from the generator is not interpretable.
+
+For the same reason, the notebook01 legacy path also moves with resolution:
+0.0762 at 4×4, **0.0649** at 18×18.
+
+### 9b. Stale artifact, not regenerated
+
+`figures/fault_generator_run_normal_flow.png` was produced at the 4×4 default
+and is now stale: its CV(J) and severity panels reflect a 4×4 run of a
+superseded healthy baseline. It is gitignored (not a committed artifact) and
+has deliberately **not** been regenerated here. It will be replaced when
+notebook 03 produces its figures.
+
+No other stale numbers were found. The 4×4-derived figures that remain in
+§5 (0.2024 and the sensitivity table) describe `generate_healthy_grid_v2`,
+which still defaults to 4×4 and is unchanged — they are correct for what they
+describe, and §5f already scopes them to the superseded point model.
