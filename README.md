@@ -14,13 +14,18 @@ Spatially-resolved electro-thermal fault signature detection in PEM fuel cells, 
 PEMFC-FAULT-DIAGNOSTICS/
 ├── notebooks/
 │   ├── 01_spatial_viz_sandbox.ipynb   # Synthetic prototype (frozen — see below)
-│   └── 02_real_data_exploration.ipynb # Real-data validation & metric analysis
+│   ├── 02_real_data_exploration.ipynb # Real-data validation & metric analysis
+│   └── 03_dynamic_fault_generation.ipynb # Healthy-baseline validation + fault demo
 ├── scripts/
-│   └── load_real_data.py              # Loader for the real open PEMFC dataset
+│   ├── load_real_data.py              # Loader for the real open PEMFC dataset
+│   ├── fault_generator.py             # Load-trace-driven synthetic fault generator
+│   ├── analyze_real_structure.py      # Real healthy spatial-template analysis
+│   └── measure_resolution_effects.py  # Grid-resolution confound measurement
 ├── data/
 │   └── raw/                            # Real dataset (git-ignored, see Data section)
 ├── docs/
-│   └── real_data_notes.md             # Dataset citation, format, limitations, findings
+│   ├── real_data_notes.md             # Dataset citation, format, limitations, findings
+│   └── synthetic_generator_notes.md   # Generator decisions, limits, Phase 3b scope
 ├── figures/                            # Generated outputs (git-ignored)
 └── hfc_env/                            # Python 3.12.9 virtualenv (git-ignored)
 ```
@@ -81,29 +86,45 @@ version control), and retires an earlier ad-hoc "Phase 7" reference to the
 no-false-alarm check, which is Phase 5 below.
 
 - **Phase 1 — Real data integration, validation, CV(J) adoption**: **COMPLETE**
-- **Phase 2 — Real-load-driven synthetic fault generator**: Tasks 1/1b/2
-  **COMPLETE** (real FC-DLC load trace extraction + conditioning-hold
+- **Phase 2 — Real-load-driven synthetic fault generator**: **COMPLETE**
+  (Tasks 1/1b/2: real FC-DLC load trace extraction + conditioning-hold
   correction; `scripts/fault_generator.py`'s literature-grounded fault-onset
-  trajectories driven by that trace). Task 3 (validation notebook,
-  `notebooks/03_dynamic_fault_generation.ipynb`) **NOT STARTED** — the file
-  does not exist yet.
-- **Phase 3 — Synthetic healthy-baseline rebuild (radial model)**: **IN
-  PROGRESS**, uncommitted. Closing the gap between synthetic and real
-  healthy CV(J) with a physically-grounded (not fit-to-real-data) spatial
-  model — see `docs/synthetic_generator_notes.md`.
+  trajectories driven by that trace. Task 3: validation notebook
+  `notebooks/03_dynamic_fault_generation.ipynb`, which validates the healthy
+  baseline and demonstrates the fault paths with Phase 3b caveats stated
+  per panel).
+- **Phase 3 — Synthetic healthy-baseline rebuild (radial model)**:
+  **COMPLETE**. An inflected (logistic) radial family, grounded physically
+  and **never fit to the real healthy data** — which is reserved as the
+  Phase 5 false-alarm validation set — carried forward as a sampled family
+  rather than a point estimate, with native resolution at 18×18 to match
+  the real sensor. See `docs/synthetic_generator_notes.md` §5–§7, §9.
 - **Phase 3b — Fault-state spatial pattern rework**: rebase the fault
-  patterns onto the radial healthy baseline, with the same treatment the
-  healthy form received (literature grounding, capability check,
-  identifiability check, honest statement of data-dependence). **NOT
-  STARTED**, not scoped in detail, explicitly after notebook 03. Required
-  because notebook 01's fault patterns were designed as modifications of a
+  patterns onto the radial healthy baseline. **NOT STARTED** — scoped in
+  `docs/synthetic_generator_notes.md` §11, with acceptance thresholds fixed
+  in §11b *before* implementation so they cannot drift. Required because
+  notebook 01's fault patterns were designed as modifications of a
   *diagonal flow-path gradient*; rebasing the interpolation's start point
-  without re-examining its endpoints would produce a trajectory between two
-  points never designed to connect — see
-  `docs/synthetic_generator_notes.md` §8.
+  without re-examining its endpoints produces a trajectory between two
+  points never designed to connect (§8). The measured consequence: a single
+  scalar — correlation with distance-from-centre — currently separates
+  healthy from fault at **100% accuracy at severity 0.01**, before any
+  meaningful fault has developed, which is basis mismatch rather than fault
+  physics (§10).
+
+  **Scope correction (§11a):** this phase **cannot** receive the treatment the
+  healthy form received. Capability, identifiability and resolution checks
+  all consumed real templates, and **no fault-labelled real data for this
+  cell exists or is obtainable without hardware**. Phase 3b therefore
+  produces **mutually coherent, literature-grounded fault patterns, not
+  validated ones**, and no downstream result may describe them as validated.
+  This is a **permanent limitation**, not a gap pending future work.
 - **Phase 4 — Fault classification models**: a snapshot spatial-vs-bulk
   classifier, and a sequence-based (LSTM) predictive/precursor model. **NOT
-  STARTED.**
+  STARTED — queued behind Phase 3b, deliberately.** Training the spatial arm
+  against the current fault patterns would let it score near-perfectly on a
+  basis-mismatch artifact the bulk arm is blind to, confirming the project's
+  central hypothesis for the wrong reason (§10).
 - **Phase 5 — No-false-alarm validation**: validate both Phase 4 models
   against real healthy dynamic-load data. **NOT STARTED.**
 

@@ -1101,3 +1101,220 @@ No other stale numbers were found. The 4×4-derived figures that remain in
 §5 (0.2024 and the sensitivity table) describe `generate_healthy_grid_v2`,
 which still defaults to 4×4 and is unchanged — they are correct for what they
 describe, and §5f already scopes them to the superseded point model.
+
+---
+
+## 10. Standing test: does this artifact hit one arm preferentially?
+
+**A question to ask of every future generator change, not a one-time
+observation.**
+
+The project's central deliverable is a *delta between two arms* — same
+simulation, same architecture, one fed spatial grids and one fed bulk signals
+only. The justification for that design is that **simulation artifacts hit
+both arms equally**, so whatever is wrong with the simulation cancels in the
+comparison.
+
+**That justification is conditional, and it does not hold universally.**
+
+| artifact class | hits both arms equally? |
+|---|---|
+| onset timescales, severity ranges | **Yes** — both arms see the same episode timing |
+| temporal noise level | **Yes** — both arms see the same fluctuation |
+| the load trace and its segmentation | **Yes** — drives triggers, not geometry |
+| **spatial pattern geometry** | **NO** — this is by construction the thing one arm sees and the other cannot |
+
+A spatial-geometry artifact is invisible to the bulk arm and fully visible to
+the spatial arm. It therefore inflates or deflates the delta directly, and
+cancels nothing. The two-arm design provides **no protection at all** against
+errors in spatial structure.
+
+### The test to apply
+
+> **Before adopting any generator change, ask: if this choice is wrong, does
+> the error reach both arms, or only one?**
+>
+> If only one — and in practice that means the spatial arm — then the two-arm
+> design does not absorb it, the error propagates directly into the headline
+> result, and the change needs its own justification rather than inheriting
+> the "artifacts cancel" argument.
+
+**Worked example, and the reason this section exists.** With the healthy
+baseline rebased to a radial template while fault states remained on notebook
+01's diagonal gradients, the two classes came from structurally different
+families. A single scalar — each grid's correlation with distance-from-centre
+— separated healthy from fault at **100.0% accuracy**, and did so **at
+severity 0.01**, before any meaningful fault had developed:
+
+| severity | starvation | flooding | drying |
+|---|---|---|---|
+| 0.01 | 1.000 | 1.000 | 1.000 |
+| 0.05 | 1.000 | 1.000 | 1.000 |
+| 0.50 | 1.000 | 1.000 | 1.000 |
+| 0.90 | 1.000 | 1.000 | 1.000 |
+
+Chance is 0.500. Perfect separation at severity 0.01 cannot be fault physics —
+there is essentially no fault present. It is the basis mismatch. Had Phase 4
+run against this, the spatial arm would have scored near-perfectly on a
+feature the bulk arm is blind to, and the project would have confirmed its own
+central hypothesis for entirely the wrong reason.
+
+## 11. Phase 3b scope — fault-state rework onto the radial baseline
+
+**Not started. This section is scope and acceptance criteria only.**
+
+### 11a. What Phase 3b can and cannot claim — a permanent limitation
+
+Phase 3b was originally described as receiving "the same treatment the healthy
+form received: literature grounding, capability check, identifiability check,
+honest statement of data-dependence." **That is not achievable, and the reason
+is structural rather than a matter of effort.**
+
+What made the healthy rework rigorous was **real templates to check against**.
+Every one of its load-bearing steps consumed real data: the capability check
+(R² = 0.9368 against a measured ceiling of 0.9416), the identifiability check
+(parameter spans of 1.1×–1.5× against real templates), the resolution-scaling
+corroboration (1.13 against real's 1.14), the cross-session replication
+(r ≥ 0.976 across four sessions).
+
+**There is no fault-labelled real data for this cell, and none is obtainable
+without hardware.** Therefore:
+
+- There is **no capability check** — nothing to compute R² against.
+- There is **no identifiability check** — no data for parameters to be
+  identifiable *with respect to*.
+- There is **no resolution-scaling corroboration** — no real fault template
+  whose resolution response could be matched.
+
+**Phase 3b produces mutually coherent, literature-grounded fault patterns. It
+does NOT produce validated ones.** No downstream result may describe fault
+spatial patterns as validated, and no writeup may imply the fault side
+received the treatment the healthy side did.
+
+**This is a permanent limitation, not a gap pending future work within this
+project's scope.** It is not resolved by more careful modelling, a better
+literature search, or additional analysis of the existing dataset. It is
+resolved only by fault-labelled spatially-resolved data, which this project
+has established does not exist and cannot be produced without hardware. Stated
+in the same register as §6d: the limitation is to be reported, not managed
+away.
+
+### 11b. Acceptance test — specified BEFORE implementation, thresholds fixed now
+
+Recorded in advance so they cannot drift to accommodate whatever the rework
+produces.
+
+**Is one scalar sufficient? No.** Radial correlation alone is Goodhart-able: a
+rework could preserve radial character while introducing, say, a strong
+diagonal component — passing the letter of a radial-correlation test while
+remaining just as trivially separable on a diagonal feature. A single
+discriminability statistic tests one escape route and leaves the others open.
+
+**More importantly, "must not separate" is the wrong criterion at full
+severity.** Healthy and a fully-developed fault *should* be separable — that
+is the physics the project is trying to detect. The artifact is not that they
+separate; it is that they separate **immediately**, at severity 0.01, by a
+feature that reflects differing baseline geometry rather than fault
+development. The test must therefore be **severity-resolved**.
+
+**Test 1 — Continuity (PRIMARY, structural, hardest to game).**
+The fault template must converge to the healthy template as severity → 0,
+for the same cell parameters, comparing deterministic templates with the
+temporal noise draw excluded:
+
+> relative RMS difference ‖J_fault(ε) − J_healthy‖ / ‖J_healthy‖ **≤ 0.02**
+> at ε = 0.01, and increasing monotonically in ε.
+
+This is a limit condition, not a discriminability statistic, so it cannot be
+satisfied by shuffling which feature carries the signal. The current generator
+fails it grossly: at ε = 0.01 the fault grid is already essentially notebook
+01's diagonal gradient.
+
+**Test 2 — Severity-resolved separability across a battery (BACKSTOP).**
+For each feature below, the best single-threshold accuracy separating healthy
+from fault grids:
+
+> **at severity ≤ 0.05, no feature may exceed 0.60** (chance = 0.500).
+> No constraint is placed at high severity — separability there is the
+> intended physics.
+
+Battery (global-geometry / structure-type features — deliberately **not**
+mean(J) or CV(J), which legitimately shift for real faults and whose
+suppression would wrongly demand that faults be undetectable):
+
+1. correlation with distance-from-centre
+2. correlation with row index
+3. correlation with column index
+4. correlation with each diagonal (row+col, row−col)
+5. lag-1 spatial autocorrelation
+6. correlation against the cell's own healthy template
+
+**Test 3 — Cross-fault distinguishability must survive.** The three fault
+types must remain distinguishable *from each other* at full severity,
+otherwise the rework has made the classification task degenerate. A rework
+that passes Tests 1–2 by making all faults look like healthy has not
+succeeded.
+
+**Test 4 — Preserved invariants.** Load-invariance of CV(J) must hold as it
+does for the healthy family; episode counts (34/24/9) and severity_targets
+must remain bit-identical, since triggers key off the load trace and nothing
+in the spatial rework may touch that stream.
+
+### 11c. Proposed form — perturbation of a shared basis, not interpolation between endpoints
+
+The structural cause of the current problem (§8) is that fault states are
+defined as *independent endpoints* and reached by interpolation. The fix is to
+define them as *modulations of the healthy template*:
+
+```
+J_fault(i, j; s) = J_healthy(i, j) · M_fault(i, j; s)
+with  M_fault(i, j; 0) = 1  everywhere
+```
+
+Continuity (Test 1) then holds **by construction** rather than by tuning, in
+the same way the healthy family's load-invariance holds by construction
+through the `S / mean(S)` renormalization. A multiplicative modulation is also
+the physically natural choice: these mechanisms suppress local current as a
+*fractional* effect on whatever the cell was already producing.
+
+Per fault type, what `M` must express (literature-grounded, and each carrying
+its own honest caveat):
+
+- **Starvation** — O₂ depletion along the cathode flow path: monotonic
+  suppression increasing toward the air outlet. **Open problem to resolve
+  during scoping**: this requires a flow-path axis, and the real templates
+  show *no* flow-path signal (row/column correlations ≈ 0 in all four
+  sessions). The direction would be imposed from the cell's documented
+  geometry, not observed — a tuned-or-assumed input that must be labelled as
+  such and ranged, not fixed.
+- **Flooding** — liquid water accumulating in low-velocity and outlet
+  regions: localized suppression, paired with the accumulate/breakthrough
+  oscillation already present in the temporal model. Same flow-path caveat as
+  starvation for *where* the water pools.
+- **Drying** — membrane ionic resistance rising where water content is
+  lowest: suppression tied to the thermal field, which is a quantity the
+  generator already produces, making this the one fault whose spatial
+  coupling can be grounded internally rather than imposed.
+
+### 11d. What replaces the validation steps that are unavailable
+
+Internal-consistency checks only. These establish coherence, **not**
+correctness, and must never be described as validation:
+
+1. **Continuity and monotonicity** in severity (Test 1).
+2. **Severity-resolved separability profile** (Test 2) — chance at low
+   severity, rising with severity.
+3. **CV(J) trajectory direction** — each fault must move CV(J) in the
+   direction the literature claims relative to its *own* healthy baseline
+   (noting §2: CV(J) does not discriminate flooding from healthy, so this
+   check is directional only and weak for flooding specifically).
+4. **Cross-fault separation** at full severity (Test 3).
+5. **Preserved invariants** (Test 4).
+6. **Parameter labelling** — every constant tagged real / literature-grounded
+   / tuned-or-assumed at its definition, as in §5d, with the imposed
+   flow-path axis explicitly in the third category.
+
+Together these answer "is this generator self-consistent and does it behave as
+the literature describes?" They do not, and cannot, answer "is this what a
+real faulty cell looks like?"
+
