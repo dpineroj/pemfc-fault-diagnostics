@@ -33,6 +33,12 @@ PAIRS = (("drying", "flooding"), ("drying", "starvation"),
 # mean(|J|) depression, robust to whether a flow-path gradient exists. CV(J)
 # is deliberately NOT a criterion for starvation -- the two arms disagree on
 # its direction by construction -- and is reported as a diagnostic only.
+# WEAKER PROVENANCE than T1/T2's thresholds -- see Sec. 11i item 5. This was
+# chosen while first writing this script, before any Test 3 measurement
+# existed, but it was never pre-registered in Sec. 11 the way T2_THRESHOLD was.
+# It is bounded instead: the conclusion (flooding-starvation fails on the
+# no_axis arm, every other pair passes) holds for ANY threshold in
+# (0.667, 0.970] across 10 seeds -- scripts/measure_test3_band.py.
 T3_MIN = 0.95
 
 # ---- Sec. 11b Test 1, as specified -----------------------------------------

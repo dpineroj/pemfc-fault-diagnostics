@@ -1676,6 +1676,20 @@ None of the three branches is a failure of the project. Branch 3 is a
 legitimate negative result about one fault type, and reporting it as such is
 the point of fixing the branches in advance.
 
+> **Phase 4 must also read §11i before applying these branches.** The branches
+> above fix *how* the starvation result is interpreted; §11i item 3 adds a
+> **confound that determines why branch 3 would trigger**, measured after this
+> section was written. In short: the no-axis arm reaches Phase 4 with
+> starvation and flooding overlapping on spatial geometry (0.638 against a 0.95
+> threshold), so an underperforming no-axis starvation result admits two
+> explanations — genuine absence of spatial advantage, or confusability with
+> flooding — which the spatial-vs-bulk delta alone cannot separate. Branch 3's
+> conclusion holds either way, but the reason differs and must be reported.
+> §11i instructs Phase 4 to run a **binary healthy-vs-starvation** comparison
+> alongside the multi-class one to separate them, or to state explicitly that
+> no separating measurement is available. Arriving at these branches without
+> that instruction would mean reporting branch 3 without its reason.
+
 ### 11f. What replaces the validation steps that are unavailable
 
 Internal-consistency checks only. These establish coherence, **not**
@@ -2002,6 +2016,13 @@ advantage would not be demonstrated by this work — but **the reason differs
 and must be reported**, because the two imply different things about whether
 spatial sensing could help starvation at all under a different cell geometry.
 
+**§11e's three branches remain binding and are not reopened by this result.**
+They were fixed before any starvation code existed and this section adds a
+confound to them, not an amendment: nothing measured in Phase 3b adjudicates
+any branch, because no branch is adjudicable without a spatial-vs-bulk delta
+and Phase 3b produces none. Anyone arriving here first should read §11e before
+interpreting a Phase 4 starvation number.
+
 **Instruction for Phase 4**: plan a measurement that separates these two if
 one is available. The obvious candidate is a **binary healthy-vs-starvation**
 comparison alongside the multi-class one: explanation 2 predicts starvation's
@@ -2029,4 +2050,65 @@ winner before the measurement ran.
 That decision was taken in advance and is now demonstrably load-bearing, which
 is the clearest vindication in this project of fixing criteria before
 measuring rather than after.
+
+#### 5. Test 3's 0.95 threshold — weaker provenance than §11b's numbers, and bounded
+
+**Stated because §11 should not read as though every threshold in it carries
+equal weight.** It does not.
+
+**When 0.95 was chosen, exactly.** It was hardcoded when the acceptance script
+was first written, **before any Test 3 measurement of any kind existed** — no
+pair had been computed, for either arm. That is the stronger of the two
+possible claims. The weaker half: when the script was extended from two faults
+to three and the threshold was promoted to the constant `T3_MIN`, drying–
+flooding's 0.972 was already known. **The value was carried forward unchanged,
+not re-chosen**, but the reuse was not blind to that one number.
+
+What it was *not*: **0.95 was never recorded in §11 in advance**, unlike
+Test 2's 0.560, which was fixed in §11b with a measured null behind it before
+any fault code was written. "Chosen before measuring" is not the same standard
+as "pre-registered in the design document", and only the latter is
+tamper-evident. Honesty about which one applies here matters more than the
+number.
+
+**So the number is bounded instead.** The question a reader should be able to
+settle directly is *how much does the conclusion depend on 0.95?* Test 3
+pairwise across 10 seeds, N = 1000 per fault:
+
+| arm | pair | min | max |
+|---|---|---|---|
+| directional | drying–flooding | 0.970 | 0.976 |
+| directional | drying–starvation | 0.998 | 1.000 |
+| directional | flooding–starvation | 0.980 | 0.986 |
+| no_axis | drying–flooding | 0.970 | 0.976 |
+| no_axis | drying–starvation | 0.972 | 0.988 |
+| **no_axis** | **flooding–starvation** | **0.646** | **0.667** |
+
+Worst case for the failing pair is 0.667; worst case across every other pair
+is 0.970. So:
+
+> **The conclusion — flooding–starvation fails on the no-axis arm while every
+> other pair passes — holds for ANY threshold T in (0.667, 0.970].** Band
+> width 0.302. The adopted 0.95 sits inside it with 0.282 of margin below and
+> 0.020 above.
+
+**The dependence is therefore weak, but not symmetric, and the asymmetry is
+worth seeing.** Nothing in the band's lower two-thirds changes anything: the
+failing pair would still fail at any threshold above 0.667. The upper edge is
+tighter — at T > 0.970 drying–flooding begins to fail too, which would change
+the conclusion from "one pair collapsed" to "Test 3 is failing broadly". 0.95
+is 0.020 from that edge, so a threshold of 0.98 would have told a different
+story.
+
+That is the honest shape of it: the result is robust across a wide band, the
+adopted value is not centred in that band, and both facts are now on the
+record rather than resting on an assurance that the threshold did not matter.
+
+**Asymmetry with §11b, stated plainly**: Test 1's 0.02 / 0.002 / nine-point
+grid and Test 2's 0.560 at N = 1000 were pre-registered in the design document
+before implementation, with a measured null justifying the latter. Test 3's
+0.95 and Test 4's invariants were not — they were chosen while writing the
+test code. Any future reader weighing these should treat the Test 1 and Test 2
+thresholds as commitments and the Test 3 threshold as a bounded judgement
+call.
 
