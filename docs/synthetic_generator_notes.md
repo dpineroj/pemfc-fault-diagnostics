@@ -1700,3 +1700,98 @@ Together these answer "is this generator self-consistent and does it behave as
 the literature describes?" They do not, and cannot, answer "is this what a
 real faulty cell looks like?"
 
+### 11g. The severity convexity exponent — adopted after a test failure
+
+**This subsection exists so the sequence is on the record.** Convexity in
+severity is presented nowhere in this document as a prior design choice,
+because it was not one.
+
+#### 1. What actually happened, in order
+
+1. Drying and flooding were implemented with amplitude **linear** in severity:
+   `M = 1 − s·(A_uniform + A_spatial·w)`. Linear was not a reasoned choice; it
+   was the unexamined default.
+2. §11b Test 1 passed comfortably (max d(0.01) = 0.0047 / 0.0052 against the
+   ≤ 0.02 criterion), Test 3 passed at 0.972, Test 4 passed, §11f item 3
+   passed.
+3. **Test 2 failed at severity 0.05** — battery-max 0.591 (drying) and 0.598
+   (flooding) against the fixed threshold of 0.560. It passed at severity 0.01
+   and 0.02, and marginally at 0.04 (0.558 / 0.557).
+4. A **convex** map, amplitude ∝ severity^p, was then proposed — **after
+   seeing that failure, and because of it.**
+
+**The physical argument for convexity is sound but was not reached
+independently.** Flooding has a percolation threshold — liquid water does not
+impede current until it actually blocks pores — and drying follows a nonlinear
+conductivity-vs-water-content curve. Both genuinely imply threshold-like
+rather than proportional onset. That reasoning holds up on its own terms. It
+is nonetheless *post-hoc*: it was constructed to explain a fix, not derived in
+advance and then tested.
+
+A reader should be able to judge that sequence for themselves. The adoption
+rests on two further points: that a linear map was never justified either (so
+this replaces an arbitrary mapping with a literature-shaped one, not a
+principled mapping with a convenient one), and that the §11b guards were
+**not** touched — the threshold stayed at 0.560, severity ≤ 0.05 stayed, and
+the feature that failed stayed in the battery.
+
+#### 2. p is a free parameter the acceptance test cannot constrain
+
+| p | sev 0.01 | sev 0.02 | sev 0.05 | verdict |
+|---|---|---|---|---|
+| 1.0 (linear) | 0.529 / 0.538 | 0.525 / 0.527 | 0.585 / 0.588 | **FAIL** |
+| 1.5 | 0.527 / 0.522 | 0.521 / 0.522 | 0.522 / 0.526 | PASS |
+| 2.0 **(adopted)** | 0.530 / 0.522 | 0.521 / 0.528 | 0.523 / 0.523 | PASS |
+
+(drying / flooding; threshold 0.560.)
+
+**p = 1.5 and p = 2.0 both pass, and nothing in the acceptance battery
+distinguishes them.** The test constrains p only to "greater than about 1.3";
+its value within the passing range is unconstrained by any measurement in this
+project. `SEVERITY_CONVEXITY` is therefore labelled **tuned-or-assumed** at
+its definition, and **tuned under knowledge of the test**, which is a weaker
+status than the other tuned-or-assumed constants.
+
+**Reporting instruction, in the same spirit as §6h's r0/w breadth
+requirement**: any downstream result that is sensitive to p *specifically*
+must say so and must report the sensitivity, not quote a single-p number. A
+result that holds across the passing range of p can be reported without the
+caveat; one that does not is a result about p, not about spatial resolution.
+
+#### 3. The bound on any severity-linear formulation — a finding in its own right
+
+Worth recording independently of the fix, because it bounds what *no* linear
+form can achieve, not just this one.
+
+At severity 0.05 a linear map produces a systematic relative-RMS shape change
+of **d = 0.0220**. The healthy family's quiet end has temporal noise of
+**1/60 = 0.0167** of the template's standard deviation
+(`HEALTHY_TEMPORAL_RATIO_RANGE` reaches 60). So the perturbation a 5%-severity
+fault imposes is *larger than the fluctuation it would have to hide under* in
+the quietest cells — a 2.2% systematic change in a cell fluctuating at 1.7%.
+
+With N = 1000 per class that is reliably detectable, and it is arithmetic
+rather than a defect: **no form whose amplitude is linear in severity can
+satisfy Test 2 at severity 0.05 while still reaching a physically meaningful
+full-severity amplitude.** The two requirements are in direct tension at
+p = 1. Any future reconsideration of the form should start here rather than
+rediscovering it.
+
+#### 4. The battery worked, and that is the other half of the finding
+
+The failure was **isolated to one feature**. At severity 0.05 the six
+geometric features scored 0.512–0.539, comfortably inside the threshold; only
+`template_match` — correlation of the grid against its own cell's healthy
+template — bound, at 0.591 / 0.598.
+
+`template_match` was put in the battery specifically to catch escapes of this
+kind: a change that preserves geometric character while still shifting how
+much the grid looks like the healthy cell. **It caught exactly that, and it
+was the only feature that did.** Recorded here as evidence the battery is
+doing its job, not merely as the thing that failed — and as the concrete
+reason §11b's answer to "is one scalar sufficient?" was no. A single-scalar
+radial test would have passed this form at 0.539 and reported success.
+
+It also follows that dropping `template_match` to pass Test 2 would have been
+the textbook Goodhart move, and was never on the table.
+
