@@ -1023,10 +1023,29 @@ superseded diagonal-gradient interpolation. These rest on different
 foundations. Fault-state spatial patterns from this generator are **not
 validated output** and must not be read as such.
 
-**Phase 3b** (see README) covers the fault-state rework, with the same
+~~**Phase 3b** (see README) covers the fault-state rework, with the same
 treatment the healthy form received: literature grounding, capability check,
 identifiability check, and an honest statement of data-dependence. Not
-started, not scoped in detail, and explicitly after notebook 03.
+started, not scoped in detail, and explicitly after notebook 03.~~
+
+**SUPERSEDED by §11a — kept visible deliberately.** The struck sentence
+promised Phase 3b a treatment that **is not achievable**, and §11a exists
+specifically to explain why, so deleting the promise would remove the thing
+§11a is answering.
+
+Every load-bearing step of the healthy rework consumed **real templates**: the
+capability check (R² against a measured purely-radial ceiling), the
+identifiability check (parameter spans against real templates), the
+resolution-scaling corroboration, the cross-session replication. There is no
+fault-labelled real data for this cell and none is obtainable without
+hardware, so for fault states there is nothing to compute R² against, nothing
+for parameters to be identifiable *with respect to*, and no real fault
+template whose resolution response could be matched.
+
+Phase 3b is scoped in §11 instead, and produces **mutually coherent,
+literature-grounded fault patterns — not validated ones**. Per §11a that is a
+**permanent limitation**, not a gap pending future work within this project's
+scope.
 
 ## 9. Native resolution moved to 18×18
 
@@ -1222,8 +1241,40 @@ The fault template must converge to the healthy template as severity → 0,
 for the same cell parameters, comparing deterministic templates with the
 temporal noise draw excluded:
 
-> relative RMS difference ‖J_fault(ε) − J_healthy‖ / ‖J_healthy‖ **≤ 0.02**
-> at ε = 0.01, and increasing monotonically in ε.
+> relative RMS difference d(ε) = ‖J_fault(ε) − J_healthy‖ / ‖J_healthy‖
+> **≤ 0.02** at ε = 0.01, and increasing in ε.
+
+**The monotonicity clause, specified to the same standard as Test 2's
+threshold.** "Increasing monotonically" is unadjudicable on its own: a
+trajectory sampled at 3 points and one sampled at 30 would be judged
+differently, and small non-monotonic jitter has no stated allowance. Fixed
+now, before implementation, for the same reason 0.560 was fixed:
+
+> **Evaluation grid** (fixed): ε ∈ {0.01, 0.02, 0.05, 0.10, 0.25, 0.50, 0.75,
+> 0.90, 1.00} — nine points, including every severity the §10 separability
+> measurement used.
+>
+> **Sample**: 200 drawn cells. The criteria must hold for **every** cell, not
+> on average. Continuity is claimed to hold *by construction*, so it is a
+> structural property of the form; a single failing cell falsifies that claim
+> and is a failure.
+>
+> **(i) Convergence**: d(0.01) ≤ 0.02.
+>
+> **(ii) Local monotonicity, with tolerance**: d(εₖ₊₁) ≥ d(εₖ) − **0.002**
+> for every consecutive pair on the grid. The 0.002 absorbs discrete-grid and
+> floating-point jitter *only* — Test 1 compares deterministic templates, so
+> no sampling noise enters and no larger allowance is warranted.
+>
+> **(iii) Trend**: strict increase across widely-spaced checkpoints —
+> d(0.10) > d(0.01), d(0.50) > d(0.10), d(1.00) > d(0.50). Jitter within the
+> 0.002 tolerance cannot satisfy this spuriously, which is why both (ii) and
+> (iii) are required rather than either alone.
+>
+> **Flooding's oscillation is held at its mean** for this test. The
+> accumulate/breakthrough factor is a *temporal* modulation, and Test 1
+> compares templates with temporal variation excluded; leaving it free would
+> make d(ε) depend on oscillation phase rather than on severity.
 
 This is a limit condition, not a discriminability statistic, so it cannot be
 satisfied by shuffling which feature carries the signal. The current generator
@@ -1260,6 +1311,14 @@ suppression would wrongly demand that faults be undetectable):
 4. correlation with each diagonal (row+col, row−col)
 5. lag-1 spatial autocorrelation
 6. correlation against the cell's own healthy template
+
+**Count convention — the battery is SEVEN features across SIX numbered
+items**, because item 4 contributes two (row+col and row−col). Seven is the
+number that matters, since the acceptance test maximizes over *features*, not
+items, and the null's battery-max inflation is driven by the feature count.
+Use "seven-feature battery" in any future reference;
+`scripts/measure_battery_null.py`'s `FEATURE_NAMES` is the authority and has
+seven entries.
 
 **The 0.560 is measured, not asserted — and it is inseparable from N.**
 An earlier draft of this section proposed 0.60 from intuition. That number
@@ -1374,6 +1433,21 @@ sign**; only starvation needs a directional axis, which §11d resolves.
   i.e. where the cell is hottest. The generator's thermal field is
   centre-biased, so drying suppresses the **centre**, deepening the healthy
   bathtub and raising CV(J). Grounded internally, no imposed axis.
+
+  **Caveat at the point of use, applying to flooding equally.** This grounding
+  is only as good as the thermal field it leans on, and the thermal model's
+  per-state `(base_t, center_scale, j_scale)` triples are still
+  notebook-01-derived and were **not** touched by the healthy rework (§9 —
+  only the grid-size generalizations reached the temperature model). So
+  "grounded internally" means *grounded on a quantity the generator already
+  produces*, *not* grounded on validated physics: drying and flooding inherit
+  a centre-bias assumption from the superseded baseline.
+
+  This does not invalidate the choice — what both faults use is the *sign* of
+  the thermal gradient, which is the robust part, and nothing here depends on
+  the triples' magnitudes. But the dependency must be reported rather than
+  implied away, and the thermal model is Phase 3b-adjacent scope that this
+  grounding rests on.
 - **Flooding** — liquid water condenses preferentially in the **coldest**
   regions of the active area, so suppression is weighted toward edges and
   corners, flattening the bathtub and lowering CV(J). Paired with the
@@ -1592,10 +1666,28 @@ correctness, and must never be described as validation:
 1. **Continuity and monotonicity** in severity (Test 1).
 2. **Severity-resolved separability profile** (Test 2) — chance at low
    severity, rising with severity.
-3. **CV(J) trajectory direction** — each fault must move CV(J) in the
-   direction the literature claims relative to its *own* healthy baseline
-   (noting §2: CV(J) does not discriminate flooding from healthy, so this
-   check is directional only and weak for flooding specifically).
+3. **Magnitude / dispersion trajectory direction** — each fault must move its
+   diagnostic in the direction the literature claims, relative to its *own*
+   healthy baseline.
+
+   **For flooding, CV(J) is not a weak check — it is a vacuous one, and the
+   earlier "weak for flooding specifically" hedge is withdrawn.** §2
+   establishes that CV(J) *cannot* discriminate flooding from healthy on this
+   generator at all: flooding lowers σ(J) and mean(J) together
+   (0.047→0.041 and 0.697→0.432), and the normalization that makes CV(J)
+   load-invariant cancels almost exactly the signal that would distinguish
+   it. A check with no discriminating power is not insensitive, it is
+   inapplicable, and recording it as "weak" would leave Phase 3b appearing to
+   have a coherence check on flooding that it does not have.
+
+   **Substitute, per fault**: drying and starvation are checked on **CV(J)**;
+   flooding is checked on **mean(|J|)**, which §2 records flooding does
+   depress and which §2 already recommends evaluating jointly with CV(J).
+
+   Note the deliberate asymmetry with Test 2: mean(|J|) is *excluded* from the
+   acceptance battery for precisely the reason it works here — genuine fault
+   physics should move it. It is therefore usable as a coherence check and
+   must **never** be promoted into an acceptance threshold.
 4. **Cross-fault separation** at full severity (Test 3).
 5. **Preserved invariants** (Test 4).
 6. **Parameter labelling** — every constant tagged real / literature-grounded

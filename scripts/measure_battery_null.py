@@ -139,7 +139,9 @@ def _corr_rows(A, B):
 
 def battery_vec(grids, templates, fields):
     """
-    The 7 scalars of the Sec. 11b battery, for grids shaped (n, rows, cols).
+    The 7 scalars of the Sec. 11b battery -- seven FEATURES across that
+    section's six numbered items, since item 4 contributes two diagonals --
+    for grids shaped (n, rows, cols).
 
     Deliberately excludes mean(J) and CV(J): genuine fault physics should move
     those, so constraining them would wrongly demand faults be undetectable.
