@@ -1237,6 +1237,18 @@ from fault grids:
 > **at severity ≤ 0.05, with N = 1000 grids per class, no feature in the
 > battery may exceed 0.560** (chance = 0.500). No constraint is placed at
 > high severity — separability there is the intended physics.
+>
+> **This threshold is CONDITIONAL ON THE FORM, and the condition travels with
+> the number.** Requiring near-null separability at severity ≤ 0.05 is
+> slightly stricter than physics alone demands — a genuine 5%-severity fault
+> may be marginally detectable. What makes it the right expectation here is
+> specific to the proposed multiplicative form of §11c: continuity is
+> guaranteed *by construction* (Test 1, relative RMS ≤ 0.02 at ε = 0.01), so
+> the perturbation at ε = 0.05 really is tiny. **Under a form that does not
+> guarantee continuity by construction, this rationale does not hold and the
+> 0.560 / severity ≤ 0.05 pair must be re-derived rather than carried
+> forward.** If a form fails Test 2 while passing Test 1, that is a decision
+> point to be argued explicitly — not a licence to move the threshold.
 
 Battery (global-geometry / structure-type features — deliberately **not**
 mean(J) or CV(J), which legitimately shift for real faults and whose
@@ -1298,22 +1310,33 @@ produce arbitrarily many grids — nothing rations the sample — and a larger N
 buys a tighter threshold and therefore more power to detect residual
 artifact.
 
-**For the record, what the discarded 0.60 would have done.** At N = 100 the
-null's p95 is 0.615, *above* 0.60 — so 0.60 would have failed a perfectly
-correct generator more than 5% of the time. At N ≥ 500 the null's maximum is
-0.573, so 0.60 would have permitted genuine separation well above chance at
-severity 0.05, which is precisely what the test exists to prevent. Both
-failure modes come from the same root cause: the threshold was not anchored
-to a sample size.
+**False-failure rate of the adopted threshold, measured.** P(battery-max >
+threshold) under the null, 3000 trials per cell:
 
-**One honest caveat on strictness.** Requiring near-null separability at
-severity ≤ 0.05 is slightly stricter than physics alone demands — a genuine
-5%-severity fault may be marginally detectable. The justification is specific
-to the proposed form: with continuity holding by construction (Test 1,
-relative RMS ≤ 0.02 at ε = 0.01), the perturbation at ε = 0.05 really is
-tiny, so near-null is the right expectation. If a future form fails Test 2
-while passing Test 1, that is a decision point to be argued explicitly — not
-a licence to move the threshold.
+| N / class | > 0.54 | > 0.56 | > 0.58 | > 0.60 |
+|---|---|---|---|---|
+| 100 | 1.0000 | 0.9263 | 0.5570 | 0.1633 |
+| 200 | 0.9693 | 0.3937 | 0.0563 | 0.0037 |
+| 500 | 0.3590 | 0.0057 | 0.0000 | 0.0000 |
+| **1000** | 0.0150 | **0.0000** | 0.0000 | 0.0000 |
+
+At the adopted (N = 1000, 0.560) the null never once exceeded the threshold in
+3000 trials, so the false-failure rate is below 1/3000. The adjacent choice
+0.54 would have carried a 1.5% false-failure rate, which is why the margin
+sits where it does rather than one step tighter.
+
+**For the record, what the discarded 0.60 would have done.** At N = 100 it
+would have failed a perfectly correct generator **16.3% of the time** —
+roughly one run in six, not the "more than 5%" that reading the p95 alone
+suggested. At N ≥ 500 it would never fail a correct generator at all, but the
+null's maximum there is 0.573, so it would have permitted genuine separation
+well above chance at severity 0.05 — precisely what the test exists to
+prevent. Both failure modes come from the same root cause: the threshold was
+not anchored to a sample size.
+
+*(The strictness caveat that was here has been moved up to sit immediately
+beneath the threshold itself, so the form-dependence cannot be separated from
+the number it qualifies.)*
 
 **Test 3 — Cross-fault distinguishability must survive.** The three fault
 types must remain distinguishable *from each other* at full severity,
@@ -1343,26 +1366,225 @@ through the `S / mean(S)` renormalization. A multiplicative modulation is also
 the physically natural choice: these mechanisms suppress local current as a
 *fractional* effect on whatever the cell was already producing.
 
-Per fault type, what `M` must express (literature-grounded, and each carrying
-its own honest caveat):
+Per fault type, what `M` must express. Two of the three are grounded on the
+thermal field the generator already produces, and **with opposite radial
+sign**; only starvation needs a directional axis, which §11d resolves.
 
-- **Starvation** — O₂ depletion along the cathode flow path: monotonic
-  suppression increasing toward the air outlet. **Open problem to resolve
-  during scoping**: this requires a flow-path axis, and the real templates
-  show *no* flow-path signal (row/column correlations ≈ 0 in all four
-  sessions). The direction would be imposed from the cell's documented
-  geometry, not observed — a tuned-or-assumed input that must be labelled as
-  such and ranged, not fixed.
-- **Flooding** — liquid water accumulating in low-velocity and outlet
-  regions: localized suppression, paired with the accumulate/breakthrough
-  oscillation already present in the temporal model. Same flow-path caveat as
-  starvation for *where* the water pools.
-- **Drying** — membrane ionic resistance rising where water content is
-  lowest: suppression tied to the thermal field, which is a quantity the
-  generator already produces, making this the one fault whose spatial
-  coupling can be grounded internally rather than imposed.
+- **Drying** — membrane ionic resistance rises where water content is lowest,
+  i.e. where the cell is hottest. The generator's thermal field is
+  centre-biased, so drying suppresses the **centre**, deepening the healthy
+  bathtub and raising CV(J). Grounded internally, no imposed axis.
+- **Flooding** — liquid water condenses preferentially in the **coldest**
+  regions of the active area, so suppression is weighted toward edges and
+  corners, flattening the bathtub and lowering CV(J). Paired with the
+  accumulate/breakthrough oscillation already in the temporal model. Grounded
+  on the same thermal field as drying, with the sign reversed.
 
-### 11d. What replaces the validation steps that are unavailable
+  **Correction to an earlier draft of this section**, which stated that
+  flooding carried "the same flow-path caveat as starvation for *where* the
+  water pools". It does not. The thermal-condensation route grounds flooding
+  internally, exactly as it grounds drying. The earlier wording is withdrawn.
+- **Starvation** — O₂ depletion along the cathode flow path. **The only fault
+  that genuinely requires a directional axis**, and the literature does not
+  describe that axis as a clean monotonic ramp: current falls from inlet
+  downstream, but the outlet region can show *higher* current under voltage
+  reversal, with upstream overshoots specifically under galvanostatic
+  loading. Resolved in §11d (orientation-randomized), with its sensitivity
+  arm elevated in §11e.
+
+**A reasoned expectation about Test 3 — explicitly NOT a measured claim.**
+Drying and flooding land on *opposite* radial signs, and the three faults
+already differ in temporal character (fast / oscillatory / slow, implemented
+and literature-grounded since Phase 2). Together that suggests Test 3
+(cross-fault distinguishability) is satisfiable with no imposed axis at all.
+That is an expectation recorded so it can be checked — **it is not evidence,
+and it must be measured during implementation.** If it fails, Test 3 is not
+satisfied and the form needs revisiting; the expectation does not get to
+stand in for the measurement.
+
+### 11d. The flow-path question — measured, then resolved
+
+§11c once asserted that "the real templates show *no* flow-path signal
+(row/column correlations ≈ 0)". **That reading was too strong, and this
+section corrects it before relying on it.** The question was reopened and
+measured: `scripts/measure_residual_directionality.py`.
+
+**The residual IS directional — it was swamped, not absent.** Row, column and
+diagonal correlations on the *full* template run only 0.023–0.104, which is
+what the earlier claim rested on. But the radial component carries ~94% of
+template variance. After removing the **purely-radial ceiling** (each cell
+replaced by its radius-shell mean, ~40 effective parameters, §6e — so no
+surviving structure can be an artifact of an imperfect 3-parameter fit), the
+same correlations run **0.11–0.43**:
+
+| configuration | air | H₂ | row | col | diag_sum | diag_diff |
+|---|---|---|---|---|---|---|
+| Normal_Flow | fwd | fwd | −0.269 | −0.110 | −0.268 | −0.113 |
+| Inverse_Air_Flow | rev | fwd | +0.121 | −0.329 | −0.147 | +0.318 |
+| Inverse_Hydrogen_Flow | fwd | rev | −0.425 | +0.094 | −0.234 | −0.367 |
+| Inverse_Flow | rev | rev | −0.369 | +0.188 | −0.128 | −0.394 |
+
+**Why "row/col ≈ 0" never ruled depletion out.** The cell is documented as
+parallel-serpentine with **cross-flow** distribution between anode and cathode
+(`docs/real_data_notes.md`), i.e. air and hydrogen run along perpendicular
+axes. In a cross-flow cell combined reactant depletion is therefore
+**diagonal** — the sum of two perpendicular gradients — and a diagonal has
+near-zero correlation with *both* row and column index. The original test was
+blind to exactly the geometry this cell has.
+
+**The decisive test: does the direction track the gas routing?** Reversing a
+gas inlet/outlet is physically a *reflection* of that gas's axis, so a
+flow-locked residual must match a **mirrored** copy of its partner better than
+an unmirrored one. Every candidate transform was tested, since the sensor-grid
+orientation of the two axes is undocumented:
+
+| reversal pair | identity | flip rows | flip cols | rot180 | transpose |
+|---|---|---|---|---|---|
+| Normal → Inverse_Air (air flips) | **+0.885** | +0.161 | −0.285 | −0.419 | +0.277 |
+| Inverse_H₂ → Inverse (air flips) | **+0.990** | −0.147 | −0.020 | −0.577 | +0.204 |
+| Normal → Inverse_H₂ (H₂ flips) | **+0.886** | −0.070 | −0.032 | −0.538 | +0.290 |
+| Inverse_Air → Inverse (H₂ flips) | **+0.634** | +0.071 | −0.118 | −0.333 | +0.364 |
+
+**Identity wins every pair, by a wide margin.** Correspondingly, **85.3% of
+residual energy is config-invariant** (per-configuration specific shares 4.0%,
+14.1%, 25.5%, 14.0%), and the 2.9× inner-block gradient of §6e is essentially
+unchanged by air reversal (2.93× → 2.84×).
+
+**Conclusion: the directional residual is fixture-locked, not flow-locked.**
+Reversing either gas feed does not relocate it. This is consistent with the
+compression / contact-resistance mechanism already established for the radial
+component (`docs/real_data_notes.md`) and inconsistent with reactant
+depletion, which would have to move with the flow.
+
+**On the n=1-per-configuration confound.** Configuration is confounded with
+session, so a difference between configurations could not be attributed to gas
+routing alone. That confound would undermine a *positive* result. This is a
+**null** result — "the direction did not move when the flow reversed" — which
+session identity does not explain away. The confound therefore does not weaken
+this particular finding.
+
+#### The strongest argument AGAINST the no-axis decision
+
+Recorded explicitly, because it is the best counter-argument available and
+must not survive only in conversation.
+
+**A healthy cell at adequate stoichiometry has little reactant depletion by
+definition.** Starvation is precisely the regime where λ → 1 and depletion
+along the channel becomes a first-order effect. So the measurement above
+establishes that there is no flow-path structure in **healthy operation**; it
+*cannot* establish that fault states would lack one. Every template analysed
+here is healthy, and healthy data is close to uninformative about the
+fault-state flow-path gradient.
+
+**This is absence of evidence, not evidence of absence.** The decision below
+is taken in spite of this argument, not because the argument has been
+answered. If fault-labelled spatially-resolved data ever became available,
+this is the first thing it would settle.
+
+#### The practical blocker, which is a separate argument
+
+Distinct from defensibility, and not to be conflated with it: **even granting
+that an axis belongs there, its orientation in sensor-grid coordinates is
+unrecoverable.** The dataset does not document how the air and H₂ axes map
+onto grid rows and columns, and — because the data contains no flow-tracking
+component — there is nothing in it from which to infer the mapping.
+
+So orientation-randomization is partly a response to **ignorance of
+direction**, not only to doubt about the mechanism's existence. Two separate
+arguments support the same choice, and they should be reported as two.
+
+#### What the literature adds, and why it cuts both ways
+
+The spatial manifestation of these faults is **design-dependent, not
+intrinsic**: flow-field pattern has decisive influence on the current
+distribution, down to sharp drops at individual serpentine bends. Flooding
+accumulates first in the **middle channels** of a serpentine design and
+**under the ribs** in parallel fields; water propagates outlet→inlet on the
+cathode while dry effects propagate inlet→outlet.
+
+Design-dependence is the reading under which imposing *this* cell's documented
+geometry would be defensible. But it also means a generic monotonic
+inlet→outlet ramp is a crude caricature of what a parallel-serpentine cell
+actually produces, whose real structure is channel-to-channel and
+bend-specific. The literature supports the *mechanism* and undercuts the
+*simple ramp*.
+
+#### DECISION
+
+1. **No imposed flow-path axis** in the primary configuration.
+2. **Drying and flooding** grounded on the thermal field with opposite radial
+   sign (§11c). Neither needs an axis.
+3. **Starvation** carries a directional term whose orientation is **drawn
+   uniformly per simulated cell and held fixed across that cell's episodes.**
+   Per-episode randomization would be physically incoherent — a real cell has
+   one flow field — so the draw belongs at cell scope, alongside `c`, `r0`,
+   `w`. This encodes the literature-supported mechanism while refusing to
+   encode a direction the data cannot support, so no result can depend on one
+   specific unsupported axis.
+4. The orientation is labelled **tuned-or-assumed** at its definition, per the
+   §5d convention.
+5. The **no-axis arm** is run as well, and is elevated rather than optional —
+   see §11e.
+
+This is deliberately not "ranging an uncertain parameter", which would treat a
+structurally unsupported assumption as merely imprecise. It concedes that the
+direction is unknown and denies the model any benefit from guessing it.
+
+**What this decision depends on, and what invalidates it.** Point 1 is
+tolerable only because points 2 and 3 leave the fault set still mutually
+distinguishable. That rests on the **unmeasured** expectation recorded in
+§11c: that drying and flooding separate on *opposite radial signs*, which —
+with the already-implemented temporal character — is what would satisfy Test 3
+without any imposed axis.
+
+**That expectation is not evidence, and it is load-bearing here.** If it
+fails, starvation is no longer the only fault lacking a defensible spatial
+signature, and the no-axis decision loses its main practical support. **In
+that case the decision must be revisited, not patched** — specifically, not by
+reintroducing an axis for flooding or drying to recover separability, since
+§11d's measurement argues against a flow-locked axis for any fault, and
+§11c's thermal grounding is the whole reason those two need none. Revisiting
+means returning to the form, with §11a's limits and §11b's fixed thresholds
+both still binding.
+
+### 11e. Starvation's no-axis arm, and its interpretation pre-committed
+
+**Why this arm is elevated, not a side robustness check.** Starvation is
+simultaneously:
+
+- the **novelty extension** over Kim et al. (2023), who did not cover it;
+- the fault with the **least defensible spatial signature**, per §11d;
+- the one that, without an axis, reduces largely to a **magnitude** effect —
+  the regime where spatial sensing helps least and a bulk sensor is closest to
+  sufficient.
+
+Those three facts coincide. So the no-axis arm does not test a peripheral
+assumption; **it tests whether the headline extension survives at all.**
+
+**The three branches, written down before anything is implemented or
+measured**, so the outcome cannot be reframed once it is known. This is the
+same discipline §11b applies to thresholds, applied to an interpretation
+rather than a number.
+
+1. **The spatial-vs-bulk delta for starvation survives both arms.** The result
+   is robust to the axis assumption. Report it as such, noting that it holds
+   with and without an imposed direction.
+2. **It survives only with the directional term.** Then the starvation result
+   **depends on an imposed direction the real data does not support**, and
+   that must be reported as a stated limitation on the starvation finding
+   specifically. It is **not** resolved by selecting the directional arm as
+   the headline, and it is **not** grounds for dropping the no-axis arm from
+   the writeup.
+3. **It survives in neither.** Then starvation's spatial advantage **is not
+   demonstrated by this work**, and the claim narrows to flooding and drying.
+   The extension over Kim et al. is then reported as attempted and
+   unsupported, not quietly omitted.
+
+None of the three branches is a failure of the project. Branch 3 is a
+legitimate negative result about one fault type, and reporting it as such is
+the point of fixing the branches in advance.
+
+### 11f. What replaces the validation steps that are unavailable
 
 Internal-consistency checks only. These establish coherence, **not**
 correctness, and must never be described as validation:
@@ -1377,8 +1599,10 @@ correctness, and must never be described as validation:
 4. **Cross-fault separation** at full severity (Test 3).
 5. **Preserved invariants** (Test 4).
 6. **Parameter labelling** — every constant tagged real / literature-grounded
-   / tuned-or-assumed at its definition, as in §5d, with the imposed
-   flow-path axis explicitly in the third category.
+   / tuned-or-assumed at its definition, as in §5d, with starvation's
+   orientation-randomized axis explicitly in the third category.
+7. **Both starvation arms run**, directional and no-axis, with §11e's
+   pre-committed branches applied as written.
 
 Together these answer "is this generator self-consistent and does it behave as
 the literature describes?" They do not, and cannot, answer "is this what a

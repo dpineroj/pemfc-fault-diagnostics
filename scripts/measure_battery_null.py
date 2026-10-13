@@ -66,6 +66,7 @@ N_PER_CLASS = (25, 50, 100, 200, 500, 1000)
 GRID = DEFAULT_GRID_SHAPE
 LOAD_LEVEL = 0.697
 SEED = 20261012
+EXCEEDANCE_SEED = 777  # the stream the Sec. 11b false-failure table came from
 
 
 # ------------------------------------------------------- vectorized generator
@@ -299,11 +300,32 @@ def main():
         print()
         pf = store[(design, 100)]
         am = pf.argmax(axis=1)
-        print(f"  at N=100 -- per-feature p95, and share of the battery max:")
+        print("  at N=100 -- per-feature p95, and share of the battery max:")
         for k, nm in enumerate(FEATURE_NAMES):
             print(f"    {nm:>16}  p95={np.percentile(pf[:, k], 95):.3f}"
                   f"   drives max {100.0 * (am == k).mean():5.1f}%")
         print()
+
+    # Exceedance rates: the false-failure rate a candidate threshold would
+    # carry if the generator were perfectly correct. This is the quantity the
+    # adopted (N, threshold) pair is justified by, so it is reported here
+    # rather than computed ad-hoc.
+    print("=" * 76)
+    print("FALSE-FAILURE RATE -- P(battery-max > t) under the null")
+    print("=" * 76)
+    cands = (0.54, 0.56, 0.58, 0.60)
+    # Own seeded stream, so this table reproduces independently of how many
+    # draws the percentile loops above consumed. The figures quoted in
+    # Sec. 11b come from exactly this block.
+    exc_rng = np.random.default_rng(EXCEEDANCE_SEED)
+    hdr = f"{'N/class':>8}" + "".join(f"{t:>10.2f}" for t in cands)
+    print(hdr)
+    print("-" * len(hdr))
+    for n in (100, 200, 500, 1000):
+        bm = run_null("across", n, 3000, exc_rng, fields, rho).max(axis=1)
+        print(f"{n:>8}" + "".join(f"{(bm > t).mean():>10.4f}" for t in cands))
+    print()
+    print("  ADOPTED: N=1000, threshold 0.560 -- see Sec. 11b.")
 
 
 if __name__ == "__main__":

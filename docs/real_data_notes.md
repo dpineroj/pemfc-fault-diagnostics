@@ -222,6 +222,18 @@ so this is **not** an inlet-to-outlet flow-path gradient. It is a radially
 symmetric "bathtub": lowest in the centre of the active area, highest toward
 the edges and corners.
 
+> **Do not over-read the near-zero row/column correlations.** They describe
+> the *dominant* structure, which is radial, and they are correct for that.
+> They do **not** mean the template has no directional content: once the
+> radial component is removed, residual row/column/diagonal correlations rise
+> to 0.11–0.43. Nor do they rule out a flow-path mechanism on their own, since
+> this cell is cross-flow and combined depletion in a cross-flow cell is
+> *diagonal*, which correlates with neither row nor column. That question is
+> measured and resolved separately in
+> `docs/synthetic_generator_notes.md` §11d (the residual direction turns out
+> to be fixture-locked, not flow-locked), via
+> `scripts/measure_residual_directionality.py`.
+
 **Cross-session template correlation** (flattened static templates,
 pairwise):
 
