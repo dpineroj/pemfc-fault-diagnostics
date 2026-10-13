@@ -1234,9 +1234,9 @@ fails it grossly: at ε = 0.01 the fault grid is already essentially notebook
 For each feature below, the best single-threshold accuracy separating healthy
 from fault grids:
 
-> **at severity ≤ 0.05, no feature may exceed 0.60** (chance = 0.500).
-> No constraint is placed at high severity — separability there is the
-> intended physics.
+> **at severity ≤ 0.05, with N = 1000 grids per class, no feature in the
+> battery may exceed 0.560** (chance = 0.500). No constraint is placed at
+> high severity — separability there is the intended physics.
 
 Battery (global-geometry / structure-type features — deliberately **not**
 mean(J) or CV(J), which legitimately shift for real faults and whose
@@ -1248,6 +1248,72 @@ suppression would wrongly demand that faults be undetectable):
 4. correlation with each diagonal (row+col, row−col)
 5. lag-1 spatial autocorrelation
 6. correlation against the cell's own healthy template
+
+**The 0.560 is measured, not asserted — and it is inseparable from N.**
+An earlier draft of this section proposed 0.60 from intuition. That number
+was wrong in *both* directions depending on sample size, which is the real
+lesson: **a separability threshold is meaningless without fixing N**, because
+best-threshold accuracy on finite samples is upward-biased even when the two
+classes are drawn from an identical distribution.
+
+`scripts/measure_battery_null.py` measures the floor directly — grids drawn
+from the healthy family **alone**, no fault and no modulation, split into two
+arbitrary groups and run through the same battery. Whatever it scores there is
+attributable to finite samples and nothing else. Battery-max null at 18×18:
+
+| N / class | median | p95 | p99 | max observed | per-feature p95 | KS p95 predicted |
+|---|---|---|---|---|---|---|
+| 25 | 0.660 | 0.720 | 0.760 | 0.800 | 0.680 | 0.692 |
+| 50 | 0.610 | 0.660 | 0.690 | 0.750 | 0.630 | 0.636 |
+| 100 | 0.580 | 0.615 | 0.630 | 0.680 | 0.595 | 0.596 |
+| 200 | 0.560 | 0.583 | 0.593 | 0.618 | 0.568 | 0.568 |
+| 500 | 0.538 | 0.552 | 0.559 | 0.573 | 0.542 | 0.543 |
+| **1000** | 0.527 | **0.537** | **0.543** | **0.553** | 0.530 | 0.530 |
+
+**Why the null is principled rather than merely observed.** For two
+equal-size samples and a threshold rule, accuracy at threshold *t* is
+[F_B(t) + 1 − F_A(t)]/2, so maximizing over *t* and both orientations gives
+
+> best-threshold accuracy ≡ 0.5 + D/2,  D = two-sample Kolmogorov–Smirnov statistic
+
+The per-feature null is therefore the KS null, which is **distribution-free**:
+it depends only on N, not on the feature and not on the parameter spread,
+because under the null both groups share one distribution. The measured
+per-feature p95 matches the large-N prediction 0.5 + 1.358·√(2/N)/2 to within
+0.001 at every N — the last two columns above. Two consequences worth
+recording:
+
+- The **within-cell** and **across-cell** designs give the same null to three
+  decimals (0.537 vs 0.537 at N=1000), exactly as the identity predicts. The
+  choice between them does not need to be defended on null grounds.
+- The battery-max sits only ~0.007 above the per-feature p95, because the
+  seven features are strongly correlated; each drives the max 13–17% of the
+  time. Widening the battery therefore costs very little threshold headroom,
+  which is what makes a battery affordable as a Goodhart backstop.
+
+**Adopted: N = 1000 per class, threshold 0.560** = measured p99 (0.543) plus a
+stated ~0.02 margin, which also clears the largest value seen in 1000 null
+trials (0.553). N = 1000 is chosen over smaller N because the generator can
+produce arbitrarily many grids — nothing rations the sample — and a larger N
+buys a tighter threshold and therefore more power to detect residual
+artifact.
+
+**For the record, what the discarded 0.60 would have done.** At N = 100 the
+null's p95 is 0.615, *above* 0.60 — so 0.60 would have failed a perfectly
+correct generator more than 5% of the time. At N ≥ 500 the null's maximum is
+0.573, so 0.60 would have permitted genuine separation well above chance at
+severity 0.05, which is precisely what the test exists to prevent. Both
+failure modes come from the same root cause: the threshold was not anchored
+to a sample size.
+
+**One honest caveat on strictness.** Requiring near-null separability at
+severity ≤ 0.05 is slightly stricter than physics alone demands — a genuine
+5%-severity fault may be marginally detectable. The justification is specific
+to the proposed form: with continuity holding by construction (Test 1,
+relative RMS ≤ 0.02 at ε = 0.01), the perturbation at ε = 0.05 really is
+tiny, so near-null is the right expectation. If a future form fails Test 2
+while passing Test 1, that is a decision point to be argued explicitly — not
+a licence to move the threshold.
 
 **Test 3 — Cross-fault distinguishability must survive.** The three fault
 types must remain distinguishable *from each other* at full severity,
