@@ -1017,11 +1017,29 @@ generator is better than a plausible-looking unjustified one**, because the
 first can be reported and reasoned about and the second quietly contaminates
 anything built on it.
 
-**Consequence to state wherever this generator's output is shown**: the
-healthy baseline is the adopted radial family; the fault states are still the
-superseded diagonal-gradient interpolation. These rest on different
-foundations. Fault-state spatial patterns from this generator are **not
+**Consequence to state wherever this generator's output is shown**:
+~~the healthy baseline is the adopted radial family; the fault states are
+still the superseded diagonal-gradient interpolation. These rest on different
+foundations.~~ Fault-state spatial patterns from this generator are **not
 validated output** and must not be read as such.
+
+**PARTIALLY SUPERSEDED by §11i — read the two halves separately, because only
+one of them stopped applying.**
+
+The **mixed-basis clause is struck**: Phase 3b is complete, `PHASE3B_FAULTS`
+covers all three fault types, and every fault now modulates the cell's own
+radial healthy template. No run mixes a radial healthy baseline with
+diagonal-gradient faults any more. The superseded interpolation forms remain
+reachable only via `healthy_params=None`, i.e. by taking the legacy
+notebook-01 path as a whole, which is self-consistent.
+
+The **"not validated output" clause stands unchanged, and permanently**. Per
+§11a that has nothing to do with the basis mismatch: it follows from there
+being no fault-labelled spatially-resolved data for this cell, so no
+capability check, no identifiability check and no resolution corroboration
+exists for any fault pattern. Rebasing them onto a sounder basis made them
+*mutually coherent*, not *validated*, and no downstream result may describe
+them as validated.
 
 ~~**Phase 3b** (see README) covers the fault-state rework, with the same
 treatment the healthy form received: literature grounding, capability check,
@@ -1794,4 +1812,221 @@ radial test would have passed this form at 0.539 and reported success.
 
 It also follows that dropping `template_match` to pass Test 2 would have been
 the textbook Goodhart move, and was never on the table.
+
+### 11h. Starvation's two arms — pre-registered before implementation
+
+Written before any starvation code existed, so the prediction below cannot be
+reframed once the number is known. §11e fixed how the *Phase 4* result is
+interpreted; this section fixes what Phase 3b expects to see and what it is
+not allowed to do about it.
+
+#### 1. Pre-registered prediction: the no-axis arm may fail Test 3 against flooding
+
+**The prediction.** The no-axis arm couples starvation's suppression to local
+current density — O₂ depletes fastest where current is highest, a genuine
+self-limiting mechanism needing no flow path. But this cell's healthy template
+is a **bathtub, high at the edges**, so current-coupled starvation suppresses
+the edges. Flooding also suppresses the edges, being weighted to the coldest
+regions. **Both arms of the comparison end up edge-weighted**, differing only
+in that starvation's weight tracks each cell's own `c`/`r0`/`w` logistic
+template while flooding's tracks a fixed thermal outer product. That
+difference is real but weak, and it is the kind of difference that separates
+at ~0.6 rather than ~0.97.
+
+**So the no-axis arm is predicted to risk a genuine Test 3 failure on the
+flooding–starvation pair specifically.** This is why Test 3 must be reported
+**pairwise across all three fault pairs, per arm** — an aggregate figure would
+hide it behind drying–flooding's 0.972.
+
+**What the honest report is, if it happens.** *"The no-axis arm does not keep
+starvation distinguishable from flooding in this cell's geometry."* That is a
+finding about the arm and about the cell's bathtub geometry. It is **not** an
+occasion to adjust amplitudes until the pair separates, and the amplitudes are
+not to be touched in response to this number.
+
+**Option C was available and was rejected for the reason it would have
+worked.** A third option existed: lean harder on the per-cell `c`/`r0`/`w`
+dependence to widen the starvation–flooding gap. It would very likely improve
+*this specific number*. Its only advantage over the adopted form is passing a
+test, which is the definition of what §11b's fixed thresholds exist to
+prevent. Recorded here so that choosing it later would be visible as a
+reversal rather than look like a refinement.
+
+#### 2. Why a uniform no-axis arm (option A) was rejected
+
+The simplest no-axis form would be **spatially uniform** suppression,
+`M = 1 − s²A` with no spatial weighting at all. It was rejected.
+
+A uniform modulation carries **zero spatial information by construction**. A
+spatially-resolved classifier could not beat a bulk one on it — not as a
+measured finding, but as arithmetic. That would settle §11e branch 3 before
+Phase 4 measured anything, and Phase 4 would be computing a tautology.
+
+**This is §10's standing test applied in the inverting direction.** §10 was
+written about an artifact that handed the spatial arm a *free win* (the basis
+mismatch, 100% separability at severity 0.01). The same question — *does this
+choice reach both arms, or only one?* — catches the mirror image here: a
+choice that hands the spatial arm a **guaranteed loss** is exactly as
+corrupting as one handing it a free win, and for the same reason. Both
+determine the headline comparison from the generator's construction rather
+than from the measurement.
+
+Recorded as a generalization of §10: the test is not "does this flatter the
+hypothesis", it is "does this decide the comparison before it is measured".
+
+#### 3. §11f item 3 for starvation — specified before measuring
+
+Fixed in advance, the same way §11b's thresholds were.
+
+**PASS/FAIL criterion: starvation must depress mean(|J|).** Starvation causes
+severe current loss, and that holds whether or not a flow-path gradient
+exists — so the criterion is robust to the very question §11d left open, and
+it adjudicates both arms on the same footing.
+
+**CV(J) is explicitly NOT a criterion for starvation.** The two arms disagree
+on its *direction* by construction:
+
+- the **directional** arm imposes a gradient, which *increases* spatial spread
+  → CV(J) rises, matching the literature;
+- the **no-axis** arm suppresses the bathtub's high-current edges, which
+  *flattens* the profile → CV(J) falls.
+
+The literature's CV(J) prediction for starvation is **contingent on a
+flow-path gradient existing** — precisely what §11d found no support for in
+this cell. Making CV(J) pass/fail would therefore encode the axis assumption
+into a coherence check and **auto-fail the arm specifically built to avoid
+that assumption.** A criterion that picks the winner before measuring is not a
+criterion.
+
+CV(J) direction is therefore **reported for both arms as an arm-dependent
+diagnostic**, never as a threshold. Fixed here rather than discovered
+mid-measurement.
+
+### 11i. RESULT — the §11h prediction was confirmed, and what follows from it
+
+Phase 3b is complete. 40 of 41 acceptance checks pass. The one failure is the
+one §11h pre-registered.
+
+#### 1. The prediction, and the measurement
+
+§11h, written before any starvation code existed, predicted that the no-axis
+arm would risk failing Test 3 on the flooding–starvation pair, and said the
+difference was "the kind of difference that separates at ~0.6 rather than
+~0.97."
+
+**Measured: 0.638.**
+
+| arm | drying–flooding | drying–starvation | flooding–starvation |
+|---|---|---|---|
+| directional | 0.968 | 1.000 | 0.986 |
+| **no_axis** | 0.968 | 0.981 | **0.638 — FAIL** (threshold 0.95) |
+
+The mechanism is the one pre-registered, not a reconstruction after the fact.
+Radial-correlation means make it legible:
+
+| arm | drying | flooding | starvation |
+|---|---|---|---|
+| directional | +0.976 | +0.423 | **+0.678** (between the two) |
+| no_axis | +0.976 | +0.423 | **+0.087** (past flooding, overlapping) |
+
+Current-coupled starvation suppresses the bathtub's high-current **edges**;
+flooding suppresses the **coldest** regions, which in this cell are also the
+edges. Both land in the same place. The only thing left distinguishing them is
+that starvation's weight tracks each cell's own `c`/`r0`/`w` logistic template
+while flooding's tracks a fixed thermal outer product — and that residual is
+exactly what `template_match` picks up at 0.638.
+
+**Pre-registration is what makes this informative.** The same 0.638 explained
+after the fact would carry much less weight: a mechanism fitted to a known
+number is nearly unfalsifiable, and this document would have no way to show
+the explanation was not reverse-engineered. Because the prediction, the
+mechanism and the rough magnitude were all fixed in §11h in advance, the
+result functions as a test of the reasoning rather than a story about it.
+
+**The pairwise requirement is what surfaced it.** An aggregate "best
+cross-fault separability" for the no-axis arm would have reported **0.981**
+— drying–starvation — and passed Test 3 cleanly. The collapse would have
+gone unseen behind a number that looks healthy.
+
+#### 2. The finding, and three things it is not
+
+> **"The no-axis arm does not keep starvation distinguishable from flooding in
+> this cell's geometry."**
+
+That wording is §11h's, fixed before the measurement, and it is the claim —
+not a paraphrase of one.
+
+**It is NOT a defect to fix.** The arm did exactly what it was built to do:
+couple suppression to local current density, with no imposed flow axis. The
+overlap is a **finding about the interaction between a no-axis constraint and
+a bathtub-shaped healthy template**, not a failure of implementation.
+Amplitudes were not adjusted in response to it, and option C — leaning on the
+per-cell `c`/`r0`/`w` dependence to widen the gap — was not revisited. Per
+§11h, its only advantage would have been improving this specific number.
+
+**It is NOT a reason to prefer the directional arm.** That arm passes Test 3
+at 0.986, but it does so **by imposing a direction the real data does not
+support** (§11d: identity beat every mirror in all four reversal pairs, 85.3%
+of the residual is config-invariant). **Passing a test by way of an
+unsupported assumption is not evidence for the assumption.** If anything the
+contrast sharpens §11d's point: the directional arm's separability is
+manufactured by the assumption under dispute. Both arms proceed to Phase 4;
+neither is promoted on the strength of this number.
+
+**It is NOT generalizable beyond this cell's geometry.** The collision is
+specific to a healthy template that is **high at the edges**, where
+current-coupled suppression and cold-region suppression necessarily land
+together. A cell whose healthy profile peaked at the centre, or was flatter,
+would put these two mechanisms in different places and might show no overlap
+at all. Nothing here licenses "starvation and flooding are spatially
+confusable in PEMFCs" — only in *this* cell's bathtub.
+
+#### 3. What Phase 4 inherits — a confound it must plan for
+
+Stated sharply, because it is easy to misread later.
+
+**If the no-axis arm's starvation result underperforms in Phase 4, two
+explanations are available and the spatial-vs-bulk delta alone cannot
+distinguish them:**
+
+1. **Genuine absence of spatial advantage** — starvation without an imposed
+   axis really does reduce largely to a magnitude effect, which is the regime
+   where a bulk sensor is closest to sufficient (§11e).
+2. **Confusability with flooding on that arm** — the spatial arm has the
+   information but cannot use it, because starvation and flooding occupy
+   overlapping spatial geometry at 0.638, so a multi-class model loses
+   starvation to flooding rather than to the bulk baseline.
+
+§11e **branch 3's conclusion holds either way** — starvation's spatial
+advantage would not be demonstrated by this work — but **the reason differs
+and must be reported**, because the two imply different things about whether
+spatial sensing could help starvation at all under a different cell geometry.
+
+**Instruction for Phase 4**: plan a measurement that separates these two if
+one is available. The obvious candidate is a **binary healthy-vs-starvation**
+comparison alongside the multi-class one: explanation 2 predicts starvation's
+spatial advantage recovers when flooding is removed from the label set,
+whereas explanation 1 predicts it does not. If no such measurement is
+available, **say so explicitly** rather than reporting the delta as though it
+were unambiguous.
+
+#### 4. The CV(J) decision was load-bearing, and it is now demonstrable
+
+§11h ruled, before measuring, that CV(J) is **not** a pass/fail criterion for
+starvation, on the grounds that the two arms would disagree on its direction
+by construction. Measured, from a healthy baseline of 0.2514:
+
+| arm | starvation CV(J) | direction |
+|---|---|---|
+| directional | 0.3045 | **rises** |
+| no_axis | 0.1224 | **falls** |
+
+Opposite directions, as predicted. **Had §11h made CV(J) pass/fail, it would
+have failed the no-axis arm — for disagreeing with the flow-path assumption
+that arm exists specifically to avoid.** The criterion would have selected the
+winner before the measurement ran.
+
+That decision was taken in advance and is now demonstrably load-bearing, which
+is the clearest vindication in this project of fixing criteria before
+measuring rather than after.
 

@@ -119,6 +119,15 @@ no-false-alarm check, which is Phase 5 below.
   produces **mutually coherent, literature-grounded fault patterns, not
   validated ones**, and no downstream result may describe them as validated.
   This is a **permanent limitation**, not a gap pending future work.
+- **Phase 3b — COMPLETE.** All three fault types now modulate the radial
+  healthy template (`J_fault = J_healthy · M_fault`, continuity by
+  construction). 40/41 acceptance checks pass; the single failure was
+  pre-registered in `docs/synthetic_generator_notes.md` §11h and is recorded
+  as a finding in §11i — the no-axis starvation arm does not keep starvation
+  distinguishable from flooding in this cell's bathtub geometry (0.638 against
+  a 0.95 threshold, predicted at ~0.6 before measuring). Both starvation arms
+  proceed to Phase 4; neither is the default.
+
 - **Phase 4 — Fault classification models**: a snapshot spatial-vs-bulk
   classifier, and a sequence-based (LSTM) predictive/precursor model. **NOT
   STARTED — queued behind Phase 3b, deliberately.** Training the spatial arm
@@ -148,6 +157,18 @@ isn't lost between sessions:
   specific claim). **Parked, undecided** — no code committed for this yet.
 
 ---
+
+## Known stale artifacts
+
+- **`notebooks/03_dynamic_fault_generation.ipynb` is stale and will raise.**
+  Phase 3b made `starvation_arm` a required argument to
+  `generate_labeled_run` (Sec. 11d/11h: starvation is generated two ways and
+  neither is the default), so the notebook's bare `generate_labeled_run()`
+  call now fails deliberately rather than silently picking an arm. Its
+  starvation panels also describe the superseded diagonal-gradient
+  interpolation. **Needs the arm argument plus a re-execution, and its
+  starvation commentary rewritten against §11c/§11d.** Scoped as its own task,
+  not folded into Phase 3b. Recorded here so it is not rediscovered as a bug.
 
 ## Known open questions
 

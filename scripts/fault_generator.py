@@ -346,6 +346,12 @@ def sample_healthy_params(rng: np.random.Generator) -> dict:
         "r0": float(rng.uniform(*HEALTHY_R0_RANGE)),
         "w": float(rng.uniform(*HEALTHY_W_RANGE)),
         "temporal_ratio": float(rng.uniform(*HEALTHY_TEMPORAL_RATIO_RANGE)),
+        # Starvation's directional-arm flow axis (Sec. 11d DECISION point 3):
+        # drawn ONCE per cell and held fixed across that cell's episodes,
+        # because a real cell has one flow field -- per-episode randomization
+        # would be physically incoherent. Appended last on purpose, so the
+        # four draws above are byte-identical to before this field existed.
+        "starvation_axis_rad": float(rng.uniform(0.0, 2.0 * np.pi)),
     }
 
 
@@ -413,14 +419,32 @@ FLOODING_EDGE_LOSS = 0.40     # additional severity-1 loss at the coolest cell
 # affects only the low-severity region -- the only region that failed.
 SEVERITY_CONVEXITY = 2.0
 
-# Which faults have been rebased onto the radial baseline. Starvation is
-# deliberately NOT here yet: it is the only fault needing a directional axis
-# (Sec. 11d) and it is implemented last, with both arms, per Sec. 11e. While
-# this tuple is partial the generator is KNOWINGLY inconsistent -- drying and
-# flooding modulate the radial template while starvation still interpolates
-# notebook 01's diagonal gradient. Sec. 8's argument applies: an openly
-# inconsistent generator is better than a plausible-looking unjustified one.
-PHASE3B_FAULTS = ("drying", "flooding")
+# Starvation amplitudes. Same tuned-or-assumed status as the pair above, and
+# the same bound: 1 - (0.25 + 0.45) = 0.30 > 0, so M stays positive and
+# clip-free at full severity.
+STARVATION_UNIFORM_LOSS = 0.25
+STARVATION_AXIS_LOSS = 0.45      # directional arm, along the drawn axis
+STARVATION_COUPLED_LOSS = 0.45   # no-axis arm, proportional to local current
+
+# Sec. 11d/11h: starvation is generated TWO ways and NEITHER is the default.
+#   "directional" -- O2 depletion along a flow-path axis whose orientation is
+#       drawn uniformly per simulated cell and held fixed across that cell's
+#       episodes. Encodes the literature-supported mechanism while refusing to
+#       encode a direction the real data supports (Sec. 11d).
+#   "no_axis" -- suppression proportional to LOCAL CURRENT DENSITY. O2 depletes
+#       fastest where current is highest, a self-limiting mechanism needing no
+#       flow path at all.
+# Callers must choose explicitly; there is no fallback. A uniform third option
+# was rejected in Sec. 11h because it would carry zero spatial information and
+# so decide Phase 4's starvation comparison by arithmetic.
+STARVATION_ARMS = ("directional", "no_axis")
+
+# Every fault is now rebased onto the radial baseline, so the knowingly-
+# inconsistent mixed-basis state described in Sec. 8 is resolved: no run mixes
+# a radial healthy template with diagonal-gradient faults any more. The
+# superseded interpolation forms remain reachable only when
+# healthy_params=None, i.e. the legacy notebook-01 path taken as a whole.
+PHASE3B_FAULTS = ("drying", "flooding", "starvation")
 
 
 def _thermal_centre_bias(rows: int = ROWS, cols: int = COLS) -> np.ndarray:
@@ -454,8 +478,50 @@ def _thermal_hot_weight(rows: int = ROWS, cols: int = COLS) -> np.ndarray:
     return (cb - lo) / (hi - lo)
 
 
+def _axis_weight(theta: float, rows: int, cols: int) -> np.ndarray:
+    """
+    Normalized position along an axis at angle `theta`, in [0, 1]: 0 at the
+    inlet end, 1 at the outlet end. Used only by starvation's DIRECTIONAL arm.
+
+    The orientation is a per-cell draw, not a fixed direction -- Sec. 11d: the
+    sensor-grid orientation of the air and H2 axes is undocumented and the real
+    data holds no flow-tracking component to infer it from, so randomizing it
+    answers ignorance of direction as well as doubt about the mechanism.
+    """
+    row_idx, col_idx = np.indices((rows, cols))
+    x = col_idx - (cols - 1) / 2.0
+    y = row_idx - (rows - 1) / 2.0
+    proj = np.cos(theta) * x + np.sin(theta) * y
+    lo, hi = float(proj.min()), float(proj.max())
+    if hi - lo < 1e-12:
+        return np.zeros_like(proj, dtype=float)
+    return (proj - lo) / (hi - lo)
+
+
+def _current_coupled_weight(params: dict, rows: int, cols: int) -> np.ndarray:
+    """
+    Normalized local current density of this cell's own healthy template, in
+    [0, 1]: 1 where the cell produces most current. Used only by starvation's
+    NO-AXIS arm.
+
+    Grounding: O2 depletes fastest where current is highest, which is a genuine
+    self-limiting mechanism and needs no flow path. Note the consequence
+    pre-registered in Sec. 11h -- this cell's template is a bathtub, high at
+    the EDGES, so this weight is edge-heavy, which is also where flooding's
+    suppression falls. The predicted Test 3 risk on the flooding-starvation
+    pair follows directly from that, and is NOT to be tuned away.
+    """
+    S = logistic_healthy_shape(params["c"], params["r0"], params["w"], rows, cols)
+    lo, hi = float(S.min()), float(S.max())
+    if hi - lo < 1e-12:
+        return np.zeros_like(S)
+    return (S - lo) / (hi - lo)
+
+
 def fault_modulation(fault_type: str, severity: float,
-                     rows: int = ROWS, cols: int = COLS) -> np.ndarray:
+                     rows: int = ROWS, cols: int = COLS,
+                     params: dict | None = None,
+                     starvation_arm: str | None = None) -> np.ndarray:
     """
     M_fault(i,j;s). Exactly 1.0 everywhere at s=0, for every fault type --
     which is what makes Sec. 11b Test 1 structural rather than tuned.
@@ -483,26 +549,50 @@ def fault_modulation(fault_type: str, severity: float,
     if fault_type == "flooding":
         return 1.0 - s * (FLOODING_UNIFORM_LOSS
                           + FLOODING_EDGE_LOSS * (1.0 - w_hot))
+    if fault_type == "starvation":
+        if starvation_arm not in STARVATION_ARMS:
+            raise ValueError(
+                f"starvation requires an explicit arm, one of "
+                f"{STARVATION_ARMS}; got {starvation_arm!r}. Sec. 11d/11h: "
+                f"neither arm is the default and both are run.")
+        if params is None:
+            raise ValueError(
+                "starvation needs the cell's healthy params: the directional "
+                "arm reads its drawn axis, the no-axis arm its template.")
+        if starvation_arm == "directional":
+            if "starvation_axis_rad" not in params:
+                raise ValueError(
+                    "params lacks 'starvation_axis_rad'; draw params with "
+                    "sample_healthy_params so the axis is a per-cell draw.")
+            w = _axis_weight(params["starvation_axis_rad"], rows, cols)
+            amp = STARVATION_AXIS_LOSS
+        else:
+            w = _current_coupled_weight(params, rows, cols)
+            amp = STARVATION_COUPLED_LOSS
+        return 1.0 - s * (STARVATION_UNIFORM_LOSS + amp * w)
     raise ValueError(
-        f"fault_modulation: {fault_type!r} is not rebased yet "
-        f"(Phase 3b covers {PHASE3B_FAULTS}; starvation is Sec. 11d/11e)")
+        f"fault_modulation: unknown fault_type {fault_type!r} "
+        f"(Phase 3b covers {PHASE3B_FAULTS})")
 
 
 def fault_template_v3(fault_type: str, severity: float, params: dict,
                       load_level: float = 0.697,
-                      rows: int = ROWS, cols: int = COLS) -> np.ndarray:
+                      rows: int = ROWS, cols: int = COLS,
+                      starvation_arm: str | None = None) -> np.ndarray:
     """
     The DETERMINISTIC fault template -- no temporal noise draw. This is what
     Sec. 11b Test 1 compares, since including noise would make d(s) depend on
     the draw rather than on severity.
     """
     S = logistic_healthy_shape(params["c"], params["r0"], params["w"], rows, cols)
-    return load_level * S * fault_modulation(fault_type, severity, rows, cols)
+    return load_level * S * fault_modulation(
+        fault_type, severity, rows, cols, params, starvation_arm)
 
 
 def generate_fault_grid_v3(fault_type: str, severity: float, params: dict,
                            seed: int, load_level: float = 0.697,
-                           rows: int = ROWS, cols: int = COLS) -> np.ndarray:
+                           rows: int = ROWS, cols: int = COLS,
+                           starvation_arm: str | None = None) -> np.ndarray:
     """
     One timestep of a faulted grid for the cell described by `params`.
 
@@ -514,7 +604,8 @@ def generate_fault_grid_v3(fault_type: str, severity: float, params: dict,
     amplitude over a suppressed mean.
     """
     healthy = generate_healthy_grid_v3(params, seed, load_level, rows, cols)
-    return healthy * fault_modulation(fault_type, severity, rows, cols)
+    return healthy * fault_modulation(
+        fault_type, severity, rows, cols, params, starvation_arm)
 
 
 # ---------------------------------------------------------------------------
@@ -597,7 +688,8 @@ _GRID_GENERATORS = {
 
 def generate_current_grid(fault_type: str | None, severity: float, seed: int,
                           healthy_params: dict | None = None,
-                          rows: int = ROWS, cols: int = COLS) -> np.ndarray:
+                          rows: int = ROWS, cols: int = COLS,
+                          starvation_arm: str | None = None) -> np.ndarray:
     """
     `healthy_params` selects the severity=0 path:
       dict  -> adopted logistic family (generate_healthy_grid_v3)
@@ -620,7 +712,8 @@ def generate_current_grid(fault_type: str | None, severity: float, seed: int,
         return generate_healthy_grid_v3(healthy_params, seed, rows=rows, cols=cols)
     if healthy_params is not None and fault_type in PHASE3B_FAULTS:
         return generate_fault_grid_v3(fault_type, severity, healthy_params,
-                                      seed, rows=rows, cols=cols)
+                                      seed, rows=rows, cols=cols,
+                                      starvation_arm=starvation_arm)
     return _GRID_GENERATORS[fault_type](severity, seed, rows, cols)
 
 
@@ -1007,8 +1100,16 @@ def _install_episode(
 
 def generate_labeled_run(trace_path: str | None = None, base_seed: int = BASE_SEED,
                          healthy_model: str = "logistic",
-                         grid_shape: tuple[int, int] = DEFAULT_GRID_SHAPE) -> dict:
+                         grid_shape: tuple[int, int] = DEFAULT_GRID_SHAPE,
+                         starvation_arm: str | None = None) -> dict:
     """
+    `starvation_arm` is REQUIRED whenever the logistic healthy family is in use,
+    because starvation is generated two ways and Sec. 11d/11h fixes that neither
+    is the default: pass "directional" or "no_axis" explicitly. Both are meant
+    to be run and compared, so defaulting one of them would quietly privilege
+    it. It is ignored on the legacy `healthy_model="notebook01"` path, where the
+    whole superseded interpolation form applies.
+
     `grid_shape` sets the generated resolution, defaulting to 18x18 to match
     the real validation data natively. CV(J) from this family is
     resolution-dependent (Sec. 7c), so grid size must be stated wherever its
@@ -1051,6 +1152,13 @@ def generate_labeled_run(trace_path: str | None = None, base_seed: int = BASE_SE
     no-carryover logic is wrong, but because the concatenation itself isn't
     physically continuous there.
     """
+    if healthy_model == "logistic" and starvation_arm not in STARVATION_ARMS:
+        raise ValueError(
+            f"generate_labeled_run requires starvation_arm={STARVATION_ARMS} "
+            f"when healthy_model='logistic'; got {starvation_arm!r}. "
+            f"Sec. 11d/11h: starvation is generated two ways and neither is "
+            f"the default -- both are run and compared, so defaulting one "
+            f"would quietly privilege it.")
     grid_rows, grid_cols = int(grid_shape[0]), int(grid_shape[1])
 
     if healthy_model not in ("logistic", "notebook01"):
@@ -1131,7 +1239,8 @@ def generate_labeled_run(trace_path: str | None = None, base_seed: int = BASE_SE
     for i in range(n):
         ft, sev = fault_type[i], severity[i]
         cg = generate_current_grid(ft, sev, seed=base_seed + i, healthy_params=healthy_params,
-                                   rows=grid_rows, cols=grid_cols)
+                                   rows=grid_rows, cols=grid_cols,
+                                   starvation_arm=starvation_arm)
         tg = generate_temperature_grid(cg, ft, sev, seed=base_seed + i)
         current_grids[i] = cg
         temp_grids[i] = tg
@@ -1158,7 +1267,10 @@ def generate_labeled_run(trace_path: str | None = None, base_seed: int = BASE_SE
 
 
 if __name__ == "__main__":
-    run = generate_labeled_run()
+    # The demo has to name an arm, like every caller: Sec. 11h fixes that
+    # neither is the default. "directional" here is a DEMO choice only and
+    # carries no precedence -- the no_axis arm is equally part of the design.
+    run = generate_labeled_run(starvation_arm="directional")
     t_seconds = run["t_seconds"]
     load_ratio = run["load_ratio"]
     segment_id = run["segment_id"]
