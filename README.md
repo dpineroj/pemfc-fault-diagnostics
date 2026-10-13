@@ -25,7 +25,8 @@ PEMFC-FAULT-DIAGNOSTICS/
 │   └── raw/                            # Real dataset (git-ignored, see Data section)
 ├── docs/
 │   ├── real_data_notes.md             # Dataset citation, format, limitations, findings
-│   └── synthetic_generator_notes.md   # Generator decisions, limits, Phase 3b scope
+│   ├── synthetic_generator_notes.md   # Generator decisions, limits, Phase 3b scope
+│   └── external_fault_datasets.md     # Audits of external fault-labelled data, + decisions
 ├── figures/                            # Generated outputs (git-ignored)
 └── hfc_env/                            # Python 3.12.9 virtualenv (git-ignored)
 ```
@@ -57,6 +58,14 @@ Confirmed, across multiple sources, that PEMFC faults have distinct onset timesc
 ---
 
 ## Data
+
+**Audited and deliberately NOT integrated:** Zhou et al. (2022) AC voltage
+response / EIS data (Mendeley `10.17632/yhg3ks3jzc.1`, **CC BY 4.0**) is real
+and fault-labelled, but covers no starvation and is static-load, so it is not
+used as a Phase 4 bulk-arm anchor. Reasoning, full audit, and the split-design
+evidence it did produce are in `docs/external_fault_datasets.md`. The files are
+retained under `data/raw/zhou_ac_voltage/` (gitignored) in case a later use
+emerges. **No loader exists and none is planned.**
 
 **Primary dataset:** Toharias, B., Suárez, C., Iranzo, A., Salva, M., Rosa, F. (2024). *"Dataset and measurements from a current density sensor during experimental testing of dynamic load cycling for a parallel-serpentine design of a proton exchange membrane fuel cell."* Data in Brief. DOI: [10.12795/11441/153760](https://doi.org/10.12795/11441/153760)
 

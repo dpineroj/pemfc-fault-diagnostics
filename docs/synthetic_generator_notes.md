@@ -1279,6 +1279,17 @@ has established does not exist and cannot be produced without hardware. Stated
 in the same register as §6d: the limitation is to be reported, not managed
 away.
 
+**Substantiated, not merely asserted — see `docs/external_fault_datasets.md`
+§2.** Two independent real fault-labelled PEMFC datasets have now been
+audited, Kim et al. (2023) and Zhou et al. (2022), and **both are
+static-load**; neither is spatially resolved, neither covers starvation, and
+neither captures fault onset as a transition. The apparent structural reason
+is recorded there: inducing a *controlled, labelled* fault appears to require
+holding operating conditions fixed, which is in tension with capturing the
+same fault under dynamic loading, where the label becomes ambiguous about when
+the fault began. That explains why this limitation is permanent rather than
+merely current.
+
 ### 11b. Acceptance test — specified BEFORE implementation, thresholds fixed now
 
 Recorded in advance so they cannot drift to accommodate whatever the rework
