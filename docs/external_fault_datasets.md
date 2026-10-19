@@ -219,3 +219,41 @@ produce labelled fault data at all.**
 
 This does not upgrade §11a from permanent to anything else. It explains why it
 is permanent.
+
+
+---
+
+## 3. Derived load traces are no longer tracked — an earlier precedent reversed
+
+**Supersession, not a silent change.** Until this point
+`data/processed/normal_flow_fc-dlc_load_trace_full.npz` and
+`..._dynamic_only.npz` were **committed to the repository**. Phase 4's adoption
+of all four gas configurations (§12c) would have extended that precedent from
+two files to five, which prompted examining it rather than inheriting it. It
+was reversed: `data/processed/` is now gitignored and the two tracked files
+were removed from the index with `git rm --cached` (they remain on disk).
+
+Two reasons.
+
+**1. Consistency of licence handling.** The repository is public and these
+traces are **derived from CC-BY-NC third-party data** (Toharias et al.).
+Redistribution of a normalized bulk scalar channel is *probably* permitted,
+but **"probably permitted under someone else's licence" is a weaker position
+than "we don't redistribute third-party data"**, and the project already
+takes the stronger line elsewhere: the Zhou data is gitignored despite being
+**CC BY 4.0, i.e. MORE permissive**. Treating NC-derived data more liberally
+than permissively-licensed raw data was inconsistent, and the inconsistency
+was the argument for changing it.
+
+**2. Stale-artifact risk on regenerable files.** The traces are
+**deterministically regenerable** by `scripts/extract_load_trace.py` from
+`data/raw/`. Tracking regenerable artifacts whose *inputs* are not shipped
+invites exactly one failure mode: the extraction logic changes and the
+committed artifact silently does not. **This project has already hit that
+once** — the conditioning-hold correction changed what counts as a dynamic
+segment, which changed the trace. A tracked npz would have survived that
+change unnoticed.
+
+Regeneration is documented in the README. Nothing is lost: the traces are
+reproducible from the raw dataset, which the README already explains how to
+obtain and place.
