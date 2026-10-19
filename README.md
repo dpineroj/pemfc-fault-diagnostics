@@ -85,6 +85,20 @@ pip install -r requirements.txt   # numpy, pandas, matplotlib, scipy, scikit-lea
 
 Place the downloaded dataset under `data/raw/PEMFC_Parallel-Serpentine/` (git-ignored; not included in this repo per the dataset's license terms).
 
+**Regenerating the derived load traces.** `data/processed/` is git-ignored — the
+load traces are derived from CC-BY-NC third-party data and are deterministically
+regenerable, so they are not redistributed here (reasoning in
+`docs/external_fault_datasets.md` §3). To rebuild them from `data/raw/`:
+
+```powershell
+python scripts/extract_load_trace.py          # Normal_Flow (full + dynamic-only)
+```
+
+Phase 4 additionally needs the other three gas configurations' dynamic-only
+traces (`Inverse_Flow`, `Inverse_Air_Flow`, `Inverse_Hydrogen_Flow`), built with
+the same `extract_load_trace` / `detect_holds` / `extract_dynamic_segments` /
+`concatenate_segments` sequence per configuration.
+
 ---
 
 ## Phases

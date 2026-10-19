@@ -4,3 +4,7 @@ __pycache__/
 .ipynb_checkpoints/
 figures/*.png
 data/raw/
+data/processed/
+
+.model_a_cache/
+figures/poster/
