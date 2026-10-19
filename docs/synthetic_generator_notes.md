@@ -2070,6 +2070,32 @@ advantage would not be demonstrated by this work — but **the reason differs
 and must be reported**, because the two imply different things about whether
 spatial sensing could help starvation at all under a different cell geometry.
 
+#### Scope of the 0.638, clarified by Model A
+
+**Model A did not reproduce the predicted confusability, and the reason bounds
+this finding rather than contradicting it.** Model A's spatial arm confuses
+flooding with starvation at **0.011 (directional) and 0.015 (no_axis)** — the
+no_axis arm is barely worse than the directional one, where §11i item 3
+anticipated a Phase 4 confound.
+
+The 0.638 above was **best-threshold separability on the seven-feature
+global-geometry battery at full severity**. Model A's spatial arm uses **all
+324 grid values** plus the two bulk scalars, and separates the pair far better
+than any single geometric scalar does. **The finding stands exactly as stated —
+about that battery — and does not transfer to a full-grid classifier.**
+
+Consequently **§11i item 3's Phase 4 confound is not triggered for Model A**,
+and the binary healthy-vs-starvation comparison is not needed to disambiguate
+its result, because no_axis starvation does not underperform there (spatial
+recall 0.933, precision 0.882, against bulk's 0.718 / 0.519).
+
+**That instruction stays in force for Model B.** Model B works on sequences at
+short lead times, where the precursor measurement found starvation's entire
+onset is 2–5 s and severity is identically zero more than ~5 s before the
+threshold crossing. With far less signal to separate the classes, the
+confound could still bite there, and the binary comparison remains the way to
+tell the two explanations apart.
+
 **§11e's three branches remain binding and are not reopened by this result.**
 They were fixed before any starvation code existed and this section adds a
 confound to them, not an amendment: nothing measured in Phase 3b adjudicates
