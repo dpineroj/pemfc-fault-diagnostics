@@ -94,3 +94,19 @@ understates the spatial arm specifically and biases a spatial-vs-bulk delta
 toward zero. `phase4_model_a.py` runs at `max_iter=5000` and asserts
 convergence per fit, collecting any failures into `NONCONVERGED` and printing
 them at the end. Keep that check in any model comparison added later.
+
+## Where to put artifacts worth keeping
+
+**In the repo (gitignored if need be), never `/tmp` or a scratchpad.** Both are
+cleared without warning — a multi-hour run log and a deliberately preserved
+copy of a superseded run were both lost to a 12-day gap, along with the
+background task output that held the traceback.
+
+The protection failed because of WHERE it was put, not whether it was done.
+Copying a log "somewhere safe" is not safe if that somewhere is temporary.
+Use a gitignored directory inside the repo (`run_logs/` is already ignored),
+so the file survives anything short of a deliberate clean.
+
+Corollary for long runs: write results incrementally to such a path as they
+are produced. A run that only materialises its output at the end loses
+everything to a mid-run death, including the evidence of why it died.

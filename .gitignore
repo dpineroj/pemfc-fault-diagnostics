@@ -8,3 +8,5 @@ data/processed/
 
 .model_a_cache/
 figures/poster/
+AGENTS.md
+run_logs/
