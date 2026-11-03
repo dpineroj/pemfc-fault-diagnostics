@@ -110,3 +110,30 @@ so the file survives anything short of a deliberate clean.
 Corollary for long runs: write results incrementally to such a path as they
 are produced. A run that only materialises its output at the end loses
 everything to a mid-run death, including the evidence of why it died.
+
+## Verifying a commit changed tracking state
+
+**After any commit meant to change what is TRACKED, verify with
+`git ls-files` rather than trusting that the commit succeeded. A commit that
+reports success is not evidence the index changed the way you meant.**
+
+The specific trap: **supplying pathspecs to `git commit` commits the
+WORKING-TREE state for those paths and silently discards whatever was staged
+for them.** So
+
+```
+git rm --cached some/file      # stages a deletion
+git commit -- some/ other/     # DISCARDS it, if the file still exists on disk
+```
+
+commits nothing for `some/`, reports success, and leaves the file tracked.
+This happened once here: 188cd2a asserted two CC-BY-NC-derived npz files had
+been untracked, they were still tracked, and `.gitignore` has no effect on
+tracked files -- so third-party data stayed in a public tree while the commit
+message and the docs both said it had been withdrawn. Fixed in a83784d by
+staging and committing with NO pathspec.
+
+Pathspecs on `git commit` are still the right tool for splitting unrelated
+changes across commits -- that use is fine, since it only ever commits content
+that is present. The failure mode is specific to DELETIONS and other
+index-only state.
