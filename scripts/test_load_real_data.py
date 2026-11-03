@@ -1,6 +1,6 @@
 """
-Regression test for load_real_data.py's CDM_C units conversion (Task 3
-review finding): asserts the loader's current_grid, integrated over all
+Regression test for load_real_data.py's CDM_C units conversion: 
+asserts the loader's current_grid, integrated over all
 segments and multiplied by segment area, tracks the bulk file's independent
 INTENSIDAD (total load current) channel to within a small tolerance.
 
