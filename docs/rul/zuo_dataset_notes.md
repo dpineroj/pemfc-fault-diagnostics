@@ -23,7 +23,66 @@ via Semantic Scholar. That matters, and §6 says why.
 
 ---
 
-## 1. Access and licence — both unresolved, and this blocks downloading
+## 1. LIVE BLOCKER — the dataset DOI does not resolve
+
+> **This is a blocker, not a footnote. If the DOI does not resolve, the dataset
+> is unusable regardless of what the literature says, and that answer is needed
+> before any further investment.**
+
+Measured, not assumed — every URL and what it returned:
+
+| URL | result |
+|---|---|
+| `https://doi.org/10.17632/w65jjt8v5w` | **HTTP 404 Not Found** |
+| `https://data.mendeley.com/datasets/w65jjt8v5w/1` | HTTP 200, page reads **"Dataset Not Found"** |
+| `https://data.mendeley.com/datasets/w65jjt8v5w/2` | same **"Dataset Not Found"** |
+| `https://api.datacite.org/dois/10.17632/w65jjt8v5w` | **HTTP 404** — the DOI is not registered with DataCite |
+
+**The DataCite 404 is the significant one.** A registered Mendeley DOI should
+have DataCite metadata. Its absence, together with the doi.org 404, is
+consistent with **the deposit never having been published out of draft** —
+which is exactly what the paper's own link suggests, since the descriptor
+prints only a tokenised draft URL:
+
+```
+https://data.mendeley.com/datasets/w65jjt8v5w/draft?a=5b37947d-ea28-48cd-a5f2-d8c61c8ed8b1
+```
+
+A tokenised draft link is **not a durable citation**. It can be revoked, it
+cannot be cited, and a project built on it has no reproducible data provenance.
+
+**This does not prove the data is gone.** The token may still work, the deposit
+may have been republished under a different identifier, and a 404 from an
+automated fetch is weaker evidence than a browser check. **What it does mean is
+that viability must be established before anything else**, by:
+
+1. opening the tokenised draft URL in a browser — the cheapest test, and the
+   only one that settles whether the files are reachable at all;
+2. searching Mendeley Data for the title, in case the published deposit sits
+   under a different accession;
+3. **emailing the corresponding author** if neither works. The dataset is the
+   subject of a Data in Brief paper, whose entire purpose is data availability,
+   so a broken deposit is a defect the authors would want reported.
+
+**Fallback if it is unrecoverable.** The nearest substitutes, with what each
+costs:
+
+- **IEEE PHM 2014 / FCLAB** — the standard benchmark, genuinely available, but
+  FC2 is *quasi-dynamic* (current ripple on a setpoint, not a drive cycle), so
+  the dynamic-load framing weakens to ripple-load. Also heavily worked over.
+- **The Nature Sci. Data (2024) catalyst-degradation set** — 36 tests, 4000+ h,
+  real ASTs, ships evaluation code. Materials-oriented rather than automotive
+  load profiles.
+- **Zenodo 7054555** — real-world automotive operation with operando per-cell
+  voltage and HFR. Possible, unaudited.
+
+None of these is FC-DLC under a real drive cycle to end of life, which is what
+made Zuo attractive. **If Zuo is unrecoverable, the RUL direction needs
+re-scoping around a different dataset, and the "our FC-DLC tooling transfers
+directly" argument weakens accordingly** — it transfers to an FC-DLC protocol,
+and none of the fallbacks use one.
+
+## 1a. Licence — also unresolved
 
 **The dataset link printed in the paper is a DRAFT URL with an access token:**
 
@@ -127,6 +186,29 @@ from the text.
 a 1008-hour run to end-of-life, remaining life is 708 hours" — does not hold.**
 It assumed the run terminated at end of life. The descriptor does not support
 that, and until the data is inspected it cannot be assumed.
+
+**THE CORRECTION, PROPAGATED.** The project's claim is now stated as:
+**health-state estimation at time t**, with remaining useful life obtainable
+**only by extrapolation against an analyst-chosen threshold**. That is a
+materially weaker claim than observed RUL and must be written that way
+everywhere — the target is constructed rather than measured, the horizon is
+unvalidated, and the prediction error cannot be checked against any ground
+truth beyond the end of the data.
+
+**The settling test requires the data and therefore stays OPEN.** Computing a
+fixed-current voltage against aging time and checking for a conventional
+threshold crossing is a measurement, not a model — but it cannot be run until
+the dataset is in hand, which §1 shows is currently blocked. **Until that test
+runs, the weaker framing is the operative one**, not a placeholder to be
+upgraded on optimism.
+
+**External material carries the wrong framing and needs correcting before it
+goes anywhere.** Any abstract, proposal, slide or summary drafted on the
+"degradation labels itself with time — at hour 300 of a 1008-hour run to
+end-of-life, remaining life is 708 hours" framing asserts observed RUL labels
+that this dataset is not known to provide. **That claim must be corrected
+before any such material is sent, submitted or presented**, and it is listed
+here rather than only in conversation so the correction is not lost.
 
 **What this changes about the project's claim.** Two different projects follow,
 and they are not interchangeable:
@@ -421,6 +503,14 @@ plausible numbers. Items 1, 2, 4 and 5 fail loudly and are therefore cheap.
 - **The prior art on this exact dataset, by these authors, has not been
   read in full**, and whether it already addresses load confounding is
   unresolved. That question gates the novelty claim (§6).
-- **Access and licence are both unresolved** (§1).
+- **Access is a LIVE BLOCKER**: the DOI 404s and is unregistered with
+  DataCite, and the only link is a tokenised draft (§1). Viability must be
+  settled before further investment.
+- **The literature is more worked than assumed.** See
+  [`literature_gate.md`](literature_gate.md): load-decoupled HI construction
+  is a contested, actively worked problem with at least five distinct
+  approaches, and reversible-recovery-aware life prediction is already
+  published by title (Meng et al. 2025). Two of the three angles this project
+  might have claimed are occupied.
 - **Our load-trace machinery transfers directly**; the new work is stitching,
   mode separation, recovery handling and an EOL definition (§9).
