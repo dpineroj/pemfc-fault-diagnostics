@@ -1,8 +1,10 @@
 # PEMFC Fault Diagnostics
 
-Spatially-resolved electro-thermal fault signature detection in PEM fuel cells, targeting **spatial current-density/temperature resolution + labeled fault conditions + real automotive dynamic loading** for PEMFC fault diagnosis and prediction.
+Health-state estimation and remaining-useful-life prediction for PEM fuel cells from **bulk** measurements under real automotive drive cycles — and whether a **load-invariant health indicator** improves either, relative to the load-confounded indicators the dynamic-load RUL literature currently uses.
 
-**Core hypothesis:** a single bulk voltage sensor cannot reliably distinguish between fault modes (flooding, drying, oxygen/hydrogen starvation) — different faults can produce similar voltage drops. A spatially resolved grid of current-density and temperature sensors can, because each fault type leaves a distinct spatial signature.
+**Completed phase — spatially-resolved fault detection (CLOSED November 2026).** The project's first line asked whether a spatially resolved current-density grid improves fault detection over bulk signals. It does, by +0.07–0.12 macro-F1 depending on estimator, concentrated almost entirely in starvation — but a 324-segment current-density plate is a laboratory instrument with no deployment path, which is an objection to the premise that cannot be answered by measuring harder. Closed deliberately rather than abandoned: see **[`docs/phase_closure_spatial.md`](docs/phase_closure_spatial.md)** for the result, the reasoning, what stands independently, and what was never validated.
+
+**Completed phase — spatial fault detection (closed Nov 2026):** a single bulk voltage sensor cannot reliably distinguish between fault modes (flooding, drying, oxygen/hydrogen starvation) — different faults can produce similar voltage drops. A spatially resolved grid of current-density and temperature sensors can, because each fault type leaves a distinct spatial signature. Closed; see [`docs/phase_closure_spatial.md`](docs/phase_closure_spatial.md). The result was +0.07–0.12 macro-F1, concentrated in starvation, with no deployment path for a 324-sensor plate.
 
 **Status:** see [Phases](#phases) below — the single source of truth for phase numbering in this repo (supersedes any other phase reference, including an earlier ad-hoc "Phase 7").
 
@@ -39,7 +41,7 @@ PEMFC-FAULT-DIAGNOSTICS/
 12 papers reviewed across segmented/spatial sensing, dynamic automotive loading, ML fault diagnosis, EIS diagnostics, and flow-field/water management, establishing the specific combination of spatial + labeled-fault + dynamic-load (later refined to include *predictive* forecasting) as an open gap.
 
 ### 2. Synthetic prototype — `01_spatial_viz_sandbox.ipynb` (frozen)
-Generates literature-grounded synthetic 4×4 current-density/temperature grids for four states (NORMAL, FLOODING, DRYING, OXYGEN STARVATION). Its central figure compares bulk voltage (non-discriminating across faults) against a spatial nonuniformity index (distinct per fault) — the project's core argument in miniature. This notebook and its output figures are treated as a completed deliverable and are not modified going forward.
+Generates literature-grounded synthetic 4×4 current-density/temperature grids for four states (NORMAL, FLOODING, DRYING, OXYGEN STARVATION). Its central figure compares bulk voltage (non-discriminating across faults) against a spatial nonuniformity index (distinct per fault) — the closed spatial phase's core argument in miniature, and see §2 of the generator notes, which establishes that CV(J) does **not** in fact discriminate flooding from healthy on this generator. This notebook and its output figures are treated as a completed deliverable and are not modified going forward.
 
 ### 3. Real dataset integration
 Integrated an open dataset (see [Data](#data) below) providing real 18×18 current-density and 9×9 temperature measurements from a commercial CDM sensor under real automotive-style dynamic load cycling. Since this dataset has **no labeled fault conditions**, its role is calibration/grounding — validating the synthetic prototype's assumptions — not classifier training data.
@@ -53,7 +55,7 @@ Work included:
 Real-data validation revealed that raw spatial-nonuniformity (σ(J), standard deviation of the current-density grid) varies 3–4× with load level alone, even in fault-free data — it confounds "fault present" with "load is high." A normalized alternative, **CV(J) = σ(J) / mean(|J|)**, was tested and found to be **34× more load-invariant** on the real dynamic-load data. This is now the project's adopted diagnostic metric (verified on healthy data only — no fault-labeled data exists to validate against yet).
 
 ### 5. Literature-grounded fault dynamics
-Confirmed, across multiple sources, that PEMFC faults have distinct onset timescales and shapes: **starvation** (fast, seconds, driven by air-supply lag during load ramps), **flooding** (fast but oscillatory — accumulate/breakthrough/drain cycles), **drying** (slow, tens of seconds to minutes, driven by membrane humidification dynamics). Also identified closely related prior work (Kim et al., *Energy* 2023) doing bulk-only 30-second-ahead fault prediction — but only under static lab loading, never real dynamic driving conditions, sharpening this project's specific novelty claim.
+Confirmed, across multiple sources, that PEMFC faults have distinct onset timescales and shapes: **starvation** (fast, seconds, driven by air-supply lag during load ramps), **flooding** (fast but oscillatory — accumulate/breakthrough/drain cycles), **drying** (slow, tens of seconds to minutes, driven by membrane humidification dynamics). Also identified closely related prior work (Kim et al., *Energy* 2023) doing bulk-only 30-second-ahead fault prediction — but only under static lab loading, never real dynamic driving conditions, sharpening the spatial phase's novelty claim (closed). Note the phase's own closing measurement on that comparison: Kim et al.'s 30-second horizon does **not** transfer to dynamically-triggered faults, because starvation and flooding onsets (1.2–3.9 s and 2.3–8.4 s) are shorter than the lead time itself — see `docs/phase_closure_spatial.md` §3.
 
 ---
 
@@ -102,6 +104,13 @@ the same `extract_load_trace` / `detect_holds` / `extract_dynamic_segments` /
 ---
 
 ## Phases
+
+> **Phases 1–5 and 3b below are the CLOSED spatial line.** Retained for
+> attribution and because their findings stand; see
+> [`docs/phase_closure_spatial.md`](docs/phase_closure_spatial.md). Phases 4
+> and 5 were scoped under that line and are **retired with it** — Model B was
+> never built and the no-false-alarm test is not pending. **The active line is
+> RUL** and does not inherit this numbering.
 
 The single source of truth for phase numbering in this repo — supersedes
 any other phase reference elsewhere (including notes/discussion outside
