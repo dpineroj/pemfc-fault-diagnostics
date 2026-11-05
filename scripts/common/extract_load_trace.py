@@ -52,10 +52,71 @@ for _p in (_os.path.join(_S, "common"), _os.path.join(_S, "spatial")):
         _sys.path.insert(0, _p)
 # --- end path bootstrap ---
 
-from cdm_parser import load_run
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROCESSED_DIR = os.path.join(PROJECT_ROOT, "data", "processed")
+
+
+def normalize_load_trace(timestamps, current) -> dict:
+    """
+    THE REUSABLE CORE: turn (timestamps, current) into a real-timed, 0-1
+    normalized load trace. Knows nothing about any dataset.
+
+    This function used to be fused to `load_run`, so the only way to get a
+    load trace was through the Seville CDM loader. That coupling was the one
+    thing standing between this module and any other dynamic-load dataset,
+    since everything downstream here -- hold detection, ramp events, dwell
+    fractions, dynamic-segment extraction -- already operates on plain
+    (t_seconds, load_ratio) arrays and is protocol-level, not dataset-level.
+
+    Parameters
+    ----------
+    timestamps : array
+        Either datetime64 (elapsed seconds are derived from the first sample)
+        or a numeric seconds axis, which is what a durability-test export
+        typically provides directly.
+    current : array
+        The load-current channel, in amps. NaNs are linearly interpolated
+        and counted, NOT dropped -- in the Seville data they are sparse,
+        isolated single-timestamp gaps from unmatched CDM<->bulk merges
+        rather than real missing spans, and silently dropping them would
+        shift the time axis.
+
+    Notes
+    -----
+    `load_ratio` is min-max normalized against THIS run's own observed
+    range, so 1.0 means "the highest current seen in this run" and is not
+    comparable across runs without the returned endpoints.
+    """
+    ts = np.asarray(timestamps)
+    current = np.asarray(current, dtype=np.float64)
+
+    n_nan = int(np.isnan(current).sum())
+    if n_nan:
+        current = pd.Series(current).interpolate(
+            limit_direction="both").to_numpy()
+
+    if np.issubdtype(ts.dtype, np.datetime64):
+        t_seconds = (ts - ts[0]) / np.timedelta64(1, "s")
+    else:
+        t_seconds = np.asarray(ts, dtype=np.float64)
+        t_seconds = t_seconds - t_seconds[0]
+
+    i_min, i_max = float(current.min()), float(current.max())
+    if i_max == i_min:
+        raise ValueError(
+            "current channel is constant; a load ratio is undefined. This is "
+            "the signature of a steady-state hold rather than a drive cycle "
+            "-- check for conditioning holds before normalizing.")
+    load_ratio = (current - i_min) / (i_max - i_min)
+
+    return {
+        "t_seconds": np.asarray(t_seconds, dtype=np.float64),
+        "load_ratio": load_ratio,
+        "intensidad_min": i_min,
+        "intensidad_max": i_max,
+        "n_interpolated": n_nan,
+    }
 
 
 def extract_load_trace(
@@ -64,7 +125,15 @@ def extract_load_trace(
     warmup_seconds: float = 300.0,
 ) -> dict:
     """
-    Load one FC-DLC run and extract a real-timed, 0-1 normalized load trace.
+    Seville-specific wrapper: load one FC-DLC run via the CDM loader and
+    normalize it. Thin by design -- all the work is in
+    `normalize_load_trace`.
+
+    `load_run` is imported lazily, inside the function, so that this module
+    (scripts/common/) carries no import-time dependency on
+    scripts/spatial/cdm_parser.py. A common/ module importing a spatial/ one
+    at module scope would make the closed phase a prerequisite for the
+    active line.
 
     Returns
     -------
@@ -81,29 +150,14 @@ def extract_load_trace(
             0/1 endpoints correspond to, kept for traceability
         'n_interpolated' : int -- how many NaN rows were filled
     """
+    from cdm_parser import load_run  # lazy: see docstring
+
     run = load_run(config, run_type=run_type, warmup_seconds=warmup_seconds)
-
-    ts = run["timestamp"]
-    intensidad = run["bulk"]["INTENSIDAD"].to_numpy().astype(np.float64)
-
-    n_nan = int(np.isnan(intensidad).sum())
-    if n_nan:
-        intensidad = pd.Series(intensidad).interpolate(limit_direction="both").to_numpy()
-
-    t_seconds = (ts - ts[0]) / np.timedelta64(1, "s")
-
-    i_min, i_max = float(intensidad.min()), float(intensidad.max())
-    load_ratio = (intensidad - i_min) / (i_max - i_min)
-
-    return {
-        "config": config,
-        "run_type": run_type,
-        "t_seconds": t_seconds.astype(np.float64),
-        "load_ratio": load_ratio,
-        "intensidad_min": i_min,
-        "intensidad_max": i_max,
-        "n_interpolated": n_nan,
-    }
+    out = normalize_load_trace(
+        run["timestamp"], run["bulk"]["INTENSIDAD"].to_numpy())
+    out["config"] = config
+    out["run_type"] = run_type
+    return out
 
 
 def find_ramp_events(t_seconds: np.ndarray, load_ratio: np.ndarray, ramp_threshold: float) -> list[dict]:
