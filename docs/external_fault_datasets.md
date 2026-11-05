@@ -11,6 +11,12 @@ being unusable.
 
 ---
 
+> **SCOPE**: §1's integration decision was taken for the CLOSED spatial phase
+> (see [`phase_closure_spatial.md`](phase_closure_spatial.md)) and is not a
+> live decision. **§2 and §3 carry forward**: the finding that both known
+> fault-labelled PEMFC datasets are static-load, with its structural
+> explanation, and the licence/redistribution reasoning.
+
 ## 1. Zhou et al. (2022) — AC voltage response / EIS
 
 **Citation**: Zhou, S. et al., *"Fault diagnosis of PEMFC based on the AC
@@ -97,7 +103,7 @@ needs:
 **Decided, with reasoning, not a finding that the dataset is unusable.**
 
 The candidate role was to anchor the Phase 4 **bulk** arm against real
-fault-labelled data, so that the headline spatial-vs-bulk comparison would not
+fault-labelled data, so that the spatial phase's headline comparison would not
 be synthetic-versus-synthetic. That role is declined, for three reasons:
 
 1. **It is silent exactly where external grounding is most needed.** Zhou et

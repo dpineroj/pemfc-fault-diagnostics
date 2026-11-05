@@ -1,4 +1,19 @@
-# Synthetic Fault Generator Notes — `scripts/fault_generator.py` (Task 2)
+# Synthetic Fault Generator Notes — `scripts/fault_generator.py`
+
+> **SCOPE — this document describes a CLOSED line of work.** The
+> spatially-resolved fault-detection phase was closed in November 2026; see
+> [`phase_closure_spatial.md`](phase_closure_spatial.md) for the result, the
+> reasoning and what stands independently.
+>
+> **Its findings stand as recorded.** Where this document says "the project",
+> read "the spatial fault-detection phase". Forward-looking commitments —
+> §11e's interpretation branches, §11i's Model B instruction, and §12's Model A
+> and Model B scoping — are **retired with the phase and are not live
+> obligations**.
+>
+> **§11a is the exception and is NOT scoped down**: its permanent-limitation
+> statement is accurate verbatim and the closure document quotes it as still
+> standing.
 
 Reference notes for the synthetic fault-onset generator built in Task 2.
 Companion to `scripts/fault_generator.py` (implementation), grounded in
@@ -67,7 +82,7 @@ normalization that makes CV(J) load-invariant also cancels almost all of the
 raw-σ signal that made flooding look spatially distinct in the first place.
 
 **Consequence for downstream work**: CV(J) remains valid as the headline
-spatial-vs-bulk diagnostic argument (a spatially resolved signal carries
+argument of the spatial phase (a spatially resolved signal carries
 information a single bulk voltage sensor can't) — that argument doesn't
 depend on discriminating between fault *types*. But CV(J) alone is **not
 sufficient as a fault-type classifier feature**: it cannot tell flooding
@@ -196,7 +211,8 @@ absolute (non-ratio) number introduced into this project should get an
 independent cross-check before it's relied on, the way `INTENSIDAD` now
 cross-checks `current_grid`.
 
-**Downstream implication — this is the headline finding, not the
+**Downstream implication — the headline finding of this phase, and the one
+that carries into the RUL line — not the
 arithmetic**: a synthetic healthy baseline that is ~5x more spatially
 uniform than real healthy data is not a cosmetic mismatch. If any CV(J)
 -based threshold or classifier is trained on this generator's healthy
@@ -1146,7 +1162,8 @@ describe, and §5f already scopes them to the superseded point model.
 **A question to ask of every future generator change, not a one-time
 observation.**
 
-The project's central deliverable is a *delta between two arms* — same
+The central deliverable of the spatial phase was a *delta between two arms*
+— same
 simulation, same architecture, one fed spatial grids and one fed bulk signals
 only. The justification for that design is that **simulation artifacts hit
 both arms equally**, so whatever is wrong with the simulation cancels in the
@@ -1729,6 +1746,12 @@ rather than a number.
 None of the three branches is a failure of the project. Branch 3 is a
 legitimate negative result about one fault type, and reporting it as such is
 the point of fixing the branches in advance.
+
+> **RETIRED WITH THE PHASE.** These branches governed interpretation of a
+> Phase 4 spatial-vs-bulk delta. **Model B was never built**, so branches 1–3
+> were never adjudicated and are not live obligations. Kept because the
+> discipline of fixing an interpretation before measuring is the transferable
+> part, not because the branches await resolution.
 
 > **Phase 4 must also read §11i before applying these branches.** The branches
 > above fix *how* the starvation result is interpreted; §11i item 3 adds a
