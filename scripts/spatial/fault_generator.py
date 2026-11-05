@@ -73,9 +73,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.ndimage import gaussian_filter
 
+# --- path bootstrap: siblings moved into scripts/{common,spatial} by the
+# November 2026 restructure. Keeps `python scripts/<dir>/<file>.py` working
+# without turning scripts/ into a package, which would change every
+# documented invocation.
+import os as _os
+import sys as _sys
+_S = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+for _p in (_os.path.join(_S, "common"), _os.path.join(_S, "spatial")):
+    if _p not in _sys.path:
+        _sys.path.insert(0, _p)
+# --- end path bootstrap ---
+
 from extract_load_trace import find_ramp_events
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROCESSED_DIR = os.path.join(PROJECT_ROOT, "data", "processed")
 FIGURES_DIR = os.path.join(PROJECT_ROOT, "figures")
 

@@ -1,5 +1,5 @@
 """
-Regression test for load_real_data.py's CDM_C units conversion: 
+Regression test for spatial/cdm_parser.py's CDM_C units conversion: 
 asserts the loader's current_grid, integrated over all
 segments and multiplied by segment area, tracks the bulk file's independent
 INTENSIDAD (total load current) channel to within a small tolerance.
@@ -19,11 +19,23 @@ from __future__ import annotations
 
 import numpy as np
 
-from load_real_data import TOTAL_ACTIVE_AREA_CM2, load_run
+# --- path bootstrap: siblings moved into scripts/{common,spatial} by the
+# November 2026 restructure. Keeps `python scripts/<dir>/<file>.py` working
+# without turning scripts/ into a package, which would change every
+# documented invocation.
+import os as _os
+import sys as _sys
+_S = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+for _p in (_os.path.join(_S, "common"), _os.path.join(_S, "spatial")):
+    if _p not in _sys.path:
+        _sys.path.insert(0, _p)
+# --- end path bootstrap ---
+
+from cdm_parser import TOTAL_ACTIVE_AREA_CM2, load_run
 
 # Tolerance on the mean ratio between grid-integrated current and bulk
 # INTENSIDAD. 5% comfortably covers the ~0.5% residual actually observed
-# (see load_real_data.py's module docstring) while still catching a real
+# (see spatial/cdm_parser.py's module docstring) while still catching a real
 # scale error (e.g. a dropped or doubled area factor, which would be off by
 # ~6.48x or ~2x respectively -- nowhere near this tolerance).
 RATIO_TOLERANCE = 0.05

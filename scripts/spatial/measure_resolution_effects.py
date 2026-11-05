@@ -52,6 +52,18 @@ from __future__ import annotations
 
 import numpy as np
 
+# --- path bootstrap: siblings moved into scripts/{common,spatial} by the
+# November 2026 restructure. Keeps `python scripts/<dir>/<file>.py` working
+# without turning scripts/ into a package, which would change every
+# documented invocation.
+import os as _os
+import sys as _sys
+_S = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+for _p in (_os.path.join(_S, "common"), _os.path.join(_S, "spatial")):
+    if _p not in _sys.path:
+        _sys.path.insert(0, _p)
+# --- end path bootstrap ---
+
 from fault_generator import (
     RADIAL_EDGE_EXPONENT,
     RADIAL_EDGE_RATIO,
@@ -59,7 +71,7 @@ from fault_generator import (
     compute_cv,
     generate_healthy_grid_v2,
 )
-from load_real_data import load_run
+from cdm_parser import load_run
 
 CONFIGS = ("Normal_Flow", "Inverse_Flow", "Inverse_Air_Flow", "Inverse_Hydrogen_Flow")
 REFERENCE_CONFIG = "Normal_Flow"

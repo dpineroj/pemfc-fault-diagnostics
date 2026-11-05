@@ -1,8 +1,8 @@
-# Synthetic Fault Generator Notes — `scripts/fault_generator.py`
+# Synthetic Fault Generator Notes — `scripts/spatial/fault_generator.py`
 
 > **SCOPE — this document describes a CLOSED line of work.** The
 > spatially-resolved fault-detection phase was closed in November 2026; see
-> [`phase_closure_spatial.md`](phase_closure_spatial.md) for the result, the
+> [`phase_closure_spatial.md`](../phase_closure_spatial.md) for the result, the
 > reasoning and what stands independently.
 >
 > **Its findings stand as recorded.** Where this document says "the project",
@@ -16,7 +16,7 @@
 > standing.
 
 Reference notes for the synthetic fault-onset generator built in Task 2.
-Companion to `scripts/fault_generator.py` (implementation), grounded in
+Companion to `scripts/spatial/fault_generator.py` (implementation), grounded in
 `01_spatial_viz_sandbox.ipynb` (frozen, spatial pattern source) and
 `02_real_data_exploration.ipynb` (CV(J) formula source), driven by
 `data/processed/normal_flow_fc-dlc_load_trace_dynamic_only.npz`.
@@ -149,7 +149,7 @@ was ~7.84x higher than real mean(\|J\|) (0.0889 A/cm²), and attributed the
 whole CV(J) gap to notebook 01 assuming too high an operating current. **That
 attribution was wrong, and the reason it was wrong is itself the finding
 below.** The real `current_grid` values, as parsed by
-`scripts/load_real_data.py` at the time, were per-segment current in Amps,
+`scripts/spatial/cdm_parser.py` at the time, were per-segment current in Amps,
 not A/cm² density — a units bug, not a physical operating-point difference.
 Corrected (see units-bug evidence below), real mean(\|J\|) is **0.576
 A/cm²**, and synthetic/real operating points actually agree within **~21%**
@@ -176,8 +176,8 @@ project until this review.
 
 **The units bug, as its own recorded finding** (full detail:
 `docs/real_data_notes.md`'s "Units fix" note; fix applied in
-`scripts/load_real_data.py`; regression test in
-`scripts/test_load_real_data.py`): the real CDM_C grid's raw values are
+`scripts/spatial/cdm_parser.py`; regression test in
+`scripts/spatial/test_load_real_data.py`): the real CDM_C grid's raw values are
 per-segment current in Amps, not A/cm² density, confirmed by integrating the
 grid per timestep and comparing against the bulk file's independent
 `INTENSIDAD` (total load current) channel, timestamp-aligned via the
@@ -446,7 +446,7 @@ same smooth field yields a different value at a different resolution, because
 "adjacent cell" means a different physical distance. The measurement below
 replaces it.
 
-#### Resolution measurement (`scripts/measure_resolution_effects.py`)
+#### Resolution measurement (`scripts/spatial/measure_resolution_effects.py`)
 
 > **Superseded in part by Sec. 7.** The measurement below covers only the
 > Sec. 5 form (now superseded) and only Normal_Flow. Sec. 7 repeats it for
@@ -500,7 +500,7 @@ against Normal_Flow, 2.06× against the band.
 
 #### Where the deficit lives — sharpest characterization to date
 
-From `scripts/analyze_real_structure.py`. **Measurement only; no parameter
+From `scripts/spatial/analyze_real_structure.py`. **Measurement only; no parameter
 was changed in response to any number here.**
 
 Decomposing each real template against its own quadratic-in-radius fit splits
@@ -544,7 +544,7 @@ and verified as such; cell-to-cell smoothness correct at matched resolution.
 after seeing these numbers.
 
 **Scope, updated**: the radial framing is now verified across **all four**
-flow configurations, not one (`scripts/analyze_real_structure.py`):
+flow configurations, not one (`scripts/spatial/analyze_real_structure.py`):
 distance-from-center correlation 0.930–0.936, quadratic R² 0.902–0.915,
 row/column correlations near zero in every session, and cross-session template
 correlation r = 0.976–0.999. The static template is reproducible across
@@ -554,10 +554,10 @@ single number across sessions: 0.3810 / 0.3266 / 0.3812 / 0.3247 (Normal,
 Inverse, Inverse_Air, Inverse_Hydrogen) — so the target band is ~0.325–0.381,
 not 0.381 alone.
 
-Reproducibility: `scripts/analyze_real_structure.py` (real structure, all four
-configurations) and `scripts/measure_resolution_effects.py` (the 2×2 table
+Reproducibility: `scripts/spatial/analyze_real_structure.py` (real structure, all four
+configurations) and `scripts/spatial/measure_resolution_effects.py` (the 2×2 table
 above) regenerate every real-data number in this section from the corrected
-loader. Regression test: `scripts/test_fault_generator.py` — asserts CV(J) stays in
+loader. Regression test: `scripts/spatial/test_fault_generator.py` — asserts CV(J) stays in
 `[0.15, 0.25]` at the default `edge_ratio=2.0` and remains load-invariant to
 1e-9 tolerance across 5 load levels.
 
@@ -850,7 +850,7 @@ real robustness gap.
 
 ## 7. Resolution confound, re-measured against the adopted family
 
-Source: `scripts/measure_resolution_effects.py` (re-runnable). Measurement
+Source: `scripts/spatial/measure_resolution_effects.py` (re-runnable). Measurement
 only — no parameter was adjusted in response to anything below. This closes
 the last open measurement before notebook 03.
 
@@ -1296,7 +1296,7 @@ has established does not exist and cannot be produced without hardware. Stated
 in the same register as §6d: the limitation is to be reported, not managed
 away.
 
-**Substantiated, not merely asserted — see `docs/external_fault_datasets.md`
+**Substantiated, not merely asserted — see `external_fault_datasets.md`
 §2.** Two independent real fault-labelled PEMFC datasets have now been
 audited, Kim et al. (2023) and Zhou et al. (2022), and **both are
 static-load**; neither is spatially resolved, neither covers starvation, and
@@ -1406,7 +1406,7 @@ items**, because item 4 contributes two (row+col and row−col). Seven is the
 number that matters, since the acceptance test maximizes over *features*, not
 items, and the null's battery-max inflation is driven by the feature count.
 Use "seven-feature battery" in any future reference;
-`scripts/measure_battery_null.py`'s `FEATURE_NAMES` is the authority and has
+`scripts/spatial/measure_battery_null.py`'s `FEATURE_NAMES` is the authority and has
 seven entries.
 
 **The 0.560 is measured, not asserted — and it is inseparable from N.**
@@ -1416,7 +1416,7 @@ lesson: **a separability threshold is meaningless without fixing N**, because
 best-threshold accuracy on finite samples is upward-biased even when the two
 classes are drawn from an identical distribution.
 
-`scripts/measure_battery_null.py` measures the floor directly — grids drawn
+`scripts/spatial/measure_battery_null.py` measures the floor directly — grids drawn
 from the healthy family **alone**, no fault and no modulation, split into two
 arbitrary groups and run through the same battery. Whatever it scores there is
 attributable to finite samples and nothing else. Battery-max null at 18×18:
@@ -1570,7 +1570,7 @@ stand in for the measurement.
 §11c once asserted that "the real templates show *no* flow-path signal
 (row/column correlations ≈ 0)". **That reading was too strong, and this
 section corrects it before relying on it.** The question was reopened and
-measured: `scripts/measure_residual_directionality.py`.
+measured: `scripts/spatial/measure_residual_directionality.py`.
 
 **The residual IS directional — it was swamped, not absent.** Row, column and
 diagonal correlations on the *full* template run only 0.023–0.104, which is

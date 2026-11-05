@@ -2,7 +2,7 @@
 
 Reference notes for the real dataset integrated in Phase 1 alongside the
 synthetic work in `01_spatial_viz_sandbox.ipynb`. Companion to
-`scripts/load_real_data.py` (loader) and `02_real_data_exploration.ipynb`
+`scripts/spatial/cdm_parser.py` (loader) and `02_real_data_exploration.ipynb`
 (analysis).
 
 ## Citation & provenance
@@ -132,7 +132,7 @@ All three `.dat` files per run: UTF-8, tab-delimited, **comma decimal**
   that comparison only checked σ(J), never mean(J) — a σ(J) that happened
   to be "same order of magnitude" masked a ~7.8x mean(J) gap that CV(J)
   (postdating that comparison) later exposed. See
-  `docs/synthetic_generator_notes.md` for the full investigation and the
+  `docs/spatial/synthetic_generator_notes.md` for the full investigation and the
   downstream implication.
 - **CDM "voltage" vs. bulk `V001`–`V007`: unreconciled.** The CDM_C file's
   per-block scalar "voltage" field (~1.9 V) doesn't match the bulk file's
@@ -176,7 +176,7 @@ units correction; only the raw σ(J) row's absolute A/cm² figures moved.
 
 **Note for anyone reading an older commit of this file**: the σ(J) values
 above are POST-correction. Any commit prior to the units fix in
-`scripts/load_real_data.py` states σ(J) (and any other absolute, non-ratio
+`scripts/spatial/cdm_parser.py` states σ(J) (and any other absolute, non-ratio
 current-density figure) too low by a factor of `1/SEGMENT_AREA_CM2`
 (≈6.48×) — those older figures reflect the raw per-segment-Amp values being
 misread as A/cm² density, not a different measurement. CV(J) values are
@@ -202,7 +202,7 @@ data is available.
 
 ## Spatial structure: a radial template, reproducible across all four sessions
 
-Source: `scripts/analyze_real_structure.py` (re-runnable; re-derives every
+Source: `scripts/spatial/analyze_real_structure.py` (re-runnable; re-derives every
 figure below from the corrected loader).
 
 Normalizing each timestep by its own spatial mean (which removes load level
@@ -230,9 +230,9 @@ the edges and corners.
 > this cell is cross-flow and combined depletion in a cross-flow cell is
 > *diagonal*, which correlates with neither row nor column. That question is
 > measured and resolved separately in
-> `docs/synthetic_generator_notes.md` §11d (the residual direction turns out
+> `docs/spatial/synthetic_generator_notes.md` §11d (the residual direction turns out
 > to be fixture-locked, not flow-locked), via
-> `scripts/measure_residual_directionality.py`.
+> `scripts/spatial/measure_residual_directionality.py`.
 
 **Cross-session template correlation** (flattened static templates,
 pairwise):
@@ -285,7 +285,7 @@ not a measured cause.
 The templates are near-identical in *shape* (r ≥ 0.976 above), but that does
 not mean they are identical in every respect. Fitting an identifiable
 three-parameter radial profile to each session
-(`docs/synthetic_generator_notes.md` §6c) separates what varies from what
+(`docs/spatial/synthetic_generator_notes.md` §6c) separates what varies from what
 doesn't:
 
 | configuration | session date | H₂ routing | centre depth `c` | transition radius `r0` | sharpness `w` |
@@ -335,7 +335,7 @@ dataset.
 — the earlier rejection was an artifact and is withdrawn.** An earlier pass
 fitted a two-parameter power form whose depth parameter turned out to be
 unidentifiable (degenerate across four orders of magnitude,
-`docs/synthetic_generator_notes.md` §6a). That fit showed *zero* spread in
+`docs/spatial/synthetic_generator_notes.md` §6a). That fit showed *zero* spread in
 depth across the four sessions, which was read as evidence against
 session-to-session variation. It was nothing of the kind: an unconstrainable
 parameter shows no spread whether or not the underlying quantity varies.
@@ -344,7 +344,7 @@ Re-fitted with an identifiable form, the depth parameter *does* vary, by
 with H₂ routing, and not separable from it here.
 
 This entry is the empirical grounding cited by
-`docs/synthetic_generator_notes.md` §5b/§5f for modelling the synthetic
+`docs/spatial/synthetic_generator_notes.md` §5b/§5f for modelling the synthetic
 healthy baseline as a radial template rather than a flow-path gradient.
 
 ## What this dataset does / doesn't let us claim
@@ -362,7 +362,7 @@ healthy baseline as a radial template rather than a flow-path gradient.
   A/cm², themselves mutually inconsistent — see above). This direction
   flipped from the pre-fix reading (which had real σ(J) *lower* than
   synthetic, at the old, wrong 0.0338 A/cm² value) — see
-  `docs/synthetic_generator_notes.md` for the full corrected comparison,
+  `docs/spatial/synthetic_generator_notes.md` for the full corrected comparison,
   including mean(J), which the original Task 1 comparison never checked.
 
 **Does not let us claim:**

@@ -89,7 +89,7 @@ own headline:
 The last point is the structural one, and it recurred from every direction the
 project approached it: the fault-diagnosis literature has no dynamic-load
 labelled spatial data, and both external fault-labelled datasets audited
-(`docs/external_fault_datasets.md`) turned out bulk-only **and** static-load.
+(`docs/spatial/external_fault_datasets.md`) turned out bulk-only **and** static-load.
 The same wall, hit three times.
 
 ### 2c. What this closure is not
@@ -168,7 +168,7 @@ than merely asserting it.
 
 ## 4. What was never validated, and never will be
 
-Quoted verbatim from §11a of `docs/synthetic_generator_notes.md`, **and still
+Quoted verbatim from §11a of `docs/spatial/synthetic_generator_notes.md`, **and still
 accurate as written**:
 
 > **This is a permanent limitation, not a gap pending future work within this

@@ -12,7 +12,7 @@ being unusable.
 ---
 
 > **SCOPE**: §1's integration decision was taken for the CLOSED spatial phase
-> (see [`phase_closure_spatial.md`](phase_closure_spatial.md)) and is not a
+> (see [`../phase_closure_spatial.md`](../phase_closure_spatial.md)) and is not a
 > live decision. **§2 and §3 carry forward**: the finding that both known
 > fault-labelled PEMFC datasets are static-load, with its structural
 > explanation, and the licence/redistribution reasoning.
@@ -252,7 +252,7 @@ than permissively-licensed raw data was inconsistent, and the inconsistency
 was the argument for changing it.
 
 **2. Stale-artifact risk on regenerable files.** The traces are
-**deterministically regenerable** by `scripts/extract_load_trace.py` from
+**deterministically regenerable** by `scripts/common/extract_load_trace.py` from
 `data/raw/`. Tracking regenerable artifacts whose *inputs* are not shipped
 invites exactly one failure mode: the extraction logic changes and the
 committed artifact silently does not. **This project has already hit that

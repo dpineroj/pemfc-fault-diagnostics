@@ -41,12 +41,12 @@ them and produces a cascade of "No such file or directory". Use Python with
 
 ## Long-running scripts
 
-Several measurement scripts take minutes to tens of minutes (`measure_battery_null.py`,
-`phase4_model_a.py`). Run them in the background rather than in the
+Several measurement scripts take minutes to tens of minutes (`scripts/spatial/measure_battery_null.py`,
+`scripts/spatial/phase4_model_a.py`). Run them in the background rather than in the
 foreground, and **pass `-u`** — without it, output is buffered and the progress
 file stays empty, which looks indistinguishable from a hung process.
 
-`phase4_model_a.py` caches its expensive per-`(trace, cell)` label-building
+`scripts/spatial/phase4_model_a.py` caches its expensive per-`(trace, cell)` label-building
 step to `.model_a_cache/` (gitignored). Delete that directory to force a
 rebuild; keep it to iterate on the modelling cheaply.
 
@@ -55,12 +55,12 @@ rebuild; keep it to iterate on the modelling cheaply.
 `data/raw/` and `data/processed/` are both gitignored and neither is
 redistributed — the raw data is third-party licensed, and the processed load
 traces are deterministically regenerable from it. Reasoning and regeneration
-instructions: `docs/external_fault_datasets.md` §3 and the README.
+instructions: `docs/spatial/external_fault_datasets.md` §3 and the README.
 
 ## Standing test: could this tooling choice fail asymmetrically between the arms?
 
 **Ask this of every multi-arm comparison, before trusting a delta.** Phrased as
-a question, in the manner of `docs/synthetic_generator_notes.md` §10.
+a question, in the manner of `docs/spatial/synthetic_generator_notes.md` §10.
 
 The arms of a spatial-vs-bulk comparison differ in dimensionality **by
 construction** — hundreds of features against a handful. So any tooling
@@ -91,7 +91,7 @@ See §12g for the instance that prompted this.
 `LogisticRegression` on the 326-feature spatial arm does NOT converge at
 `max_iter=300`, while the 2-feature bulk arm does. Left unchecked that
 understates the spatial arm specifically and biases a spatial-vs-bulk delta
-toward zero. `phase4_model_a.py` runs at `max_iter=5000` and asserts
+toward zero. `scripts/spatial/phase4_model_a.py` runs at `max_iter=5000` and asserts
 convergence per fit, collecting any failures into `NONCONVERGED` and printing
 them at the end. Keep that check in any model comparison added later.
 

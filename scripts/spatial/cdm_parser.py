@@ -31,7 +31,7 @@ File-format findings (data/raw is not tracked in git):
         1/SEGMENT_AREA_CM2 almost exactly, i.e. an internally consistent
         double-application of the area factor.
     Reproduced on a second flow configuration (see
-    test_load_real_data.py) to confirm this is a parser/units property, not
+    test_spatial/cdm_parser.py) to confirm this is a parser/units property, not
     something specific to one run. load_run() now divides the raw grid by
     SEGMENT_AREA_CM2 to return true A/cm^2. Full writeup:
     docs/synthetic_generator_notes.md.
@@ -62,7 +62,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_ROOT = os.path.join(PROJECT_ROOT, "data", "raw", "PEMFC_Parallel-Serpentine")
 
 CDM_C_BLOCK_SIZE = 26
@@ -72,7 +72,7 @@ CDM_T_GRID_SHAPE = (9, 9)
 
 # Active area per the source paper (Toharias et al. 2024 / Suarez et al.
 # 2023) -- NOT tuned to any specific run. The integration check in
-# test_load_real_data.py finds a 0.53% residual (ratio 1.0053, implying an
+# test_spatial/cdm_parser.py finds a 0.53% residual (ratio 1.0053, implying an
 # effective active area of ~49.7 cm^2 against this documented ~50 cm^2) --
 # left as-is and recorded as measured agreement rather than back-fit to
 # force ratio=1.000 exactly, which would fit the constant to one run and
@@ -222,20 +222,12 @@ def parse_cdm_blocks(
     }
 
 
-def read_bulk(filepath: str) -> pd.DataFrame:
-    """
-    Read a bulk/system channel file (PC_*.dat or FC-DLC_*.dat) into a
-    DataFrame with a single parsed `timestamp` column (from FECHA+HORA,
-    whole-second resolution) and all other columns as float32.
-    """
-    df = pd.read_csv(filepath, sep="\t", decimal=",", encoding="utf-8")
-    timestamp = pd.to_datetime(
-        df["FECHA"] + " " + df["HORA"], format="%d/%m/%Y %H:%M:%S"
-    )
-    df = df.drop(columns=["FECHA", "HORA"])
-    df = df.astype(np.float32)
-    df.insert(0, "timestamp", timestamp.astype("datetime64[ns]"))
-    return df
+# read_bulk moved to scripts/common/bulk_timeseries.py in the November 2026
+# restructure: it is the dataset-agnostic half of this module and transfers to
+# other test-station exports, whereas everything else here is specific to the
+# Seville segmented-cell CDM instrument. Re-exported so existing callers and
+# the regression test keep working unchanged.
+from bulk_timeseries import read_bulk  # noqa: E402,F401
 
 
 def _find_one(pattern: str, description: str) -> str:
@@ -304,7 +296,7 @@ def load_run(
     # receives true density -- empirical basis: integrating this raw grid
     # per timestep and comparing against the bulk file's independent
     # INTENSIDAD channel gives ratio=1.0053 with NO area factor applied
-    # (see test_load_real_data.py), confirming these are per-segment Amps.
+    # (see test_spatial/cdm_parser.py), confirming these are per-segment Amps.
     cdm_c["grid"] = cdm_c["grid"] / SEGMENT_AREA_CM2
 
     if cdm_c["grid"].shape[0] != cdm_t["grid"].shape[0]:

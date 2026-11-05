@@ -5,7 +5,7 @@ loader, for every flow configuration.
 Reconstructs an analysis that was originally done ad-hoc in-session and whose
 conclusions were written into docs/synthetic_generator_notes.md Sec. 5b
 without a re-runnable script behind them. Everything here is re-derived from
-`load_real_data.load_run` -- no figure is transcribed from those docs. If a
+`cdm_parser.load_run` -- no figure is transcribed from those docs. If a
 number here disagrees with Sec. 5b, the script is the authority and the docs
 need correcting, not the reverse.
 
@@ -35,7 +35,19 @@ from __future__ import annotations
 
 import numpy as np
 
-from load_real_data import load_run
+# --- path bootstrap: siblings moved into scripts/{common,spatial} by the
+# November 2026 restructure. Keeps `python scripts/<dir>/<file>.py` working
+# without turning scripts/ into a package, which would change every
+# documented invocation.
+import os as _os
+import sys as _sys
+_S = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+for _p in (_os.path.join(_S, "common"), _os.path.join(_S, "spatial")):
+    if _p not in _sys.path:
+        _sys.path.insert(0, _p)
+# --- end path bootstrap ---
+
+from cdm_parser import load_run
 
 CONFIGS = (
     "Normal_Flow",

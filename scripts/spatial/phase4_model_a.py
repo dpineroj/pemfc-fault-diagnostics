@@ -40,6 +40,18 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# --- path bootstrap: siblings moved into scripts/{common,spatial} by the
+# November 2026 restructure. Keeps `python scripts/<dir>/<file>.py` working
+# without turning scripts/ into a package, which would change every
+# documented invocation.
+import os as _os
+import sys as _sys
+_S = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+for _p in (_os.path.join(_S, "common"), _os.path.join(_S, "spatial")):
+    if _p not in _sys.path:
+        _sys.path.insert(0, _p)
+# --- end path bootstrap ---
+
 import fault_generator as F  # noqa: E402
 from sklearn.ensemble import RandomForestClassifier  # noqa: E402
 from sklearn.linear_model import LogisticRegression  # noqa: E402
@@ -54,9 +66,9 @@ TRACES = {
     "inv_h2": "inverse_hydrogen_flow_fc-dlc_load_trace_dynamic_only.npz",
 }
 CACHE_DIR = os.environ.get("MODEL_A_CACHE") or os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".model_a_cache")
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), ".model_a_cache")
 RESULTS_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "run_logs", "model_a_results")
 CELLS_PER_TRACE = 5
 MAX_PER_GROUP = None            # NO CAP. See Sec. 12h: a 2500 cap here silently

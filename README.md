@@ -14,23 +14,30 @@ Health-state estimation and remaining-useful-life prediction for PEM fuel cells 
 
 ```
 PEMFC-FAULT-DIAGNOSTICS/
-├── notebooks/
-│   ├── 01_spatial_viz_sandbox.ipynb   # Synthetic prototype (frozen — see below)
-│   ├── 02_real_data_exploration.ipynb # Real-data validation & metric analysis
-│   └── 03_dynamic_fault_generation.ipynb # Healthy-baseline validation + fault demo
-├── scripts/
-│   ├── load_real_data.py              # Loader for the real open PEMFC dataset
-│   ├── fault_generator.py             # Load-trace-driven synthetic fault generator
-│   ├── analyze_real_structure.py      # Real healthy spatial-template analysis
-│   └── measure_resolution_effects.py  # Grid-resolution confound measurement
-├── data/
-│   └── raw/                            # Real dataset (git-ignored, see Data section)
 ├── docs/
-│   ├── real_data_notes.md             # Dataset citation, format, limitations, findings
-│   ├── synthetic_generator_notes.md   # Generator decisions, limits, Phase 3b scope
-│   └── external_fault_datasets.md     # Audits of external fault-labelled data, + decisions
-├── figures/                            # Generated outputs (git-ignored)
-└── hfc_env/                            # Python 3.12.9 virtualenv (git-ignored)
+│   ├── phase_closure_spatial.md       # READ FIRST: closes the spatial line
+│   ├── real_data_notes.md             # Seville dataset — shared by both lines
+│   ├── spatial/                       # CLOSED phase
+│   │   ├── synthetic_generator_notes.md
+│   │   └── external_fault_datasets.md
+│   └── rul/                           # ACTIVE line (health state + RUL)
+├── scripts/
+│   ├── common/                        # transfers to both lines
+│   │   ├── extract_load_trace.py      # FC-DLC segmentation, hold detection
+│   │   └── bulk_timeseries.py         # comma-decimal bulk channel reading
+│   ├── spatial/                       # CLOSED phase (13 files)
+│   │   ├── cdm_parser.py              # Seville CDM block parser + load_run
+│   │   ├── fault_generator.py         # load-trace-driven synthetic generator
+│   │   └── ...                        # measurements, tests, Model A
+│   └── rul/                           # ACTIVE line
+├── notebooks/
+│   └── spatial/                       # 01 (frozen), 02, 03 (stale)
+├── data/
+│   ├── raw/                           # third-party data (git-ignored)
+│   └── processed/                     # regenerable traces (git-ignored)
+├── run_logs/                          # run logs + results (git-ignored)
+├── figures/                           # generated outputs (git-ignored)
+└── hfc_env/                           # Python 3.12.9 virtualenv (git-ignored)
 ```
 
 ---
@@ -40,7 +47,7 @@ PEMFC-FAULT-DIAGNOSTICS/
 ### 1. Literature review
 12 papers reviewed across segmented/spatial sensing, dynamic automotive loading, ML fault diagnosis, EIS diagnostics, and flow-field/water management, establishing the specific combination of spatial + labeled-fault + dynamic-load (later refined to include *predictive* forecasting) as an open gap.
 
-### 2. Synthetic prototype — `01_spatial_viz_sandbox.ipynb` (frozen)
+### 2. Synthetic prototype — `notebooks/spatial/01_spatial_viz_sandbox.ipynb` (frozen)
 Generates literature-grounded synthetic 4×4 current-density/temperature grids for four states (NORMAL, FLOODING, DRYING, OXYGEN STARVATION). Its central figure compares bulk voltage (non-discriminating across faults) against a spatial nonuniformity index (distinct per fault) — the closed spatial phase's core argument in miniature, and see §2 of the generator notes, which establishes that CV(J) does **not** in fact discriminate flooding from healthy on this generator. This notebook and its output figures are treated as a completed deliverable and are not modified going forward.
 
 ### 3. Real dataset integration
@@ -48,7 +55,7 @@ Integrated an open dataset (see [Data](#data) below) providing real 18×18 curre
 
 Work included:
 - Reverse-engineering an undocumented, block-structured, European-locale (comma-decimal) raw file format
-- Building a validated loader (`scripts/load_real_data.py`) with structural assertions, timestamp-based joins across sensors with different sampling behavior, and explicit handling of a DAQ startup transient
+- Building a validated loader (`scripts/spatial/cdm_parser.py`) with structural assertions, timestamp-based joins across sensors with different sampling behavior, and explicit handling of a DAQ startup transient
 - Computing the same spatial-nonuniformity metric on real data as on synthetic data for direct comparison
 
 ### 4. Key finding: CV(J) over raw σ(J)
@@ -65,7 +72,7 @@ Confirmed, across multiple sources, that PEMFC faults have distinct onset timesc
 response / EIS data (Mendeley `10.17632/yhg3ks3jzc.1`, **CC BY 4.0**) is real
 and fault-labelled, but covers no starvation and is static-load, so it is not
 used as a Phase 4 bulk-arm anchor. Reasoning, full audit, and the split-design
-evidence it did produce are in `docs/external_fault_datasets.md`. The files are
+evidence it did produce are in `docs/spatial/external_fault_datasets.md`. The files are
 retained under `data/raw/zhou_ac_voltage/` (gitignored) in case a later use
 emerges. **No loader exists and none is planned.**
 
@@ -90,10 +97,10 @@ Place the downloaded dataset under `data/raw/PEMFC_Parallel-Serpentine/` (git-ig
 **Regenerating the derived load traces.** `data/processed/` is git-ignored — the
 load traces are derived from CC-BY-NC third-party data and are deterministically
 regenerable, so they are not redistributed here (reasoning in
-`docs/external_fault_datasets.md` §3). To rebuild them from `data/raw/`:
+`docs/spatial/external_fault_datasets.md` §3). To rebuild them from `data/raw/`:
 
 ```powershell
-python scripts/extract_load_trace.py          # Normal_Flow (full + dynamic-only)
+python scripts/common/extract_load_trace.py          # Normal_Flow (full + dynamic-only)
 ```
 
 Phase 4 additionally needs the other three gas configurations' dynamic-only
@@ -120,9 +127,9 @@ no-false-alarm check, which is Phase 5 below.
 - **Phase 1 — Real data integration, validation, CV(J) adoption**: **COMPLETE**
 - **Phase 2 — Real-load-driven synthetic fault generator**: **COMPLETE**
   (Tasks 1/1b/2: real FC-DLC load trace extraction + conditioning-hold
-  correction; `scripts/fault_generator.py`'s literature-grounded fault-onset
+  correction; `scripts/spatial/fault_generator.py`'s literature-grounded fault-onset
   trajectories driven by that trace. Task 3: validation notebook
-  `notebooks/03_dynamic_fault_generation.ipynb`, which validates the healthy
+  `notebooks/spatial/03_dynamic_fault_generation.ipynb`, which validates the healthy
   baseline and demonstrates the fault paths with Phase 3b caveats stated
   per panel).
 - **Phase 3 — Synthetic healthy-baseline rebuild (radial model)**:
@@ -130,10 +137,10 @@ no-false-alarm check, which is Phase 5 below.
   and **never fit to the real healthy data** — which is reserved as the
   Phase 5 false-alarm validation set — carried forward as a sampled family
   rather than a point estimate, with native resolution at 18×18 to match
-  the real sensor. See `docs/synthetic_generator_notes.md` §5–§7, §9.
+  the real sensor. See `docs/spatial/synthetic_generator_notes.md` §5–§7, §9.
 - **Phase 3b — Fault-state spatial pattern rework**: rebase the fault
   patterns onto the radial healthy baseline. **NOT STARTED** — scoped in
-  `docs/synthetic_generator_notes.md` §11, with acceptance thresholds fixed
+  `docs/spatial/synthetic_generator_notes.md` §11, with acceptance thresholds fixed
   in §11b *before* implementation so they cannot drift. Required because
   notebook 01's fault patterns were designed as modifications of a
   *diagonal flow-path gradient*; rebasing the interpolation's start point
@@ -154,7 +161,7 @@ no-false-alarm check, which is Phase 5 below.
 - **Phase 3b — COMPLETE.** All three fault types now modulate the radial
   healthy template (`J_fault = J_healthy · M_fault`, continuity by
   construction). 40/41 acceptance checks pass; the single failure was
-  pre-registered in `docs/synthetic_generator_notes.md` §11h and is recorded
+  pre-registered in `docs/spatial/synthetic_generator_notes.md` §11h and is recorded
   as a finding in §11i — the no-axis starvation arm does not keep starvation
   distinguishable from flooding in this cell's bathtub geometry (0.638 against
   a 0.95 threshold, predicted at ~0.6 before measuring). Both starvation arms
@@ -192,7 +199,7 @@ isn't lost between sessions:
 
 ## Known stale artifacts
 
-- **`notebooks/03_dynamic_fault_generation.ipynb` is stale and will raise.**
+- **`notebooks/spatial/03_dynamic_fault_generation.ipynb` is stale and will raise.**
   Phase 3b made `starvation_arm` a required argument to
   `generate_labeled_run` (Sec. 11d/11h: starvation is generated two ways and
   neither is the default), so the notebook's bare `generate_labeled_run()`
@@ -206,6 +213,6 @@ isn't lost between sessions:
 
 - **Current-density sign convention**: raw sensor values are consistently negative; magnitude is physically plausible, sign meaning is unconfirmed. Not inverted anywhere in the pipeline — `abs()` applied only at analysis/visualization sites where sign is irrelevant.
 - **V001–V007 bulk channel meaning**: likely raw transducer outputs paired with `PT001–PT007`, not distinct fuel-cell voltage taps — unconfirmed.
-- **Internal inconsistency in the synthetic prototype**: two cells in `01_spatial_viz_sandbox.ipynb` compute the synthetic NORMAL state's nonuniformity differently (~2× disagreement). Discovered during real-data validation, documented, and deliberately left unmodified since the notebook is frozen.
+- **Internal inconsistency in the synthetic prototype**: two cells in `notebooks/spatial/01_spatial_viz_sandbox.ipynb` compute the synthetic NORMAL state's nonuniformity differently (~2× disagreement). Discovered during real-data validation, documented, and deliberately left unmodified since the notebook is frozen.
 
 Full details on all of the above are in `docs/real_data_notes.md`.

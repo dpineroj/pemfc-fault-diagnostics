@@ -13,12 +13,24 @@ Guards against two ways this could silently break in a future refactor:
    the load-invariance property the whole model is built around; it must
    never be assumed again without a test catching a regression.
 
-No pytest dependency (not installed in hfc_env, see test_load_real_data.py
+No pytest dependency (not installed in hfc_env, see test_spatial/cdm_parser.py
 for the same note) -- plain functions + asserts.
 """
 
 from __future__ import annotations
 import numpy as np
+# --- path bootstrap: siblings moved into scripts/{common,spatial} by the
+# November 2026 restructure. Keeps `python scripts/<dir>/<file>.py` working
+# without turning scripts/ into a package, which would change every
+# documented invocation.
+import os as _os
+import sys as _sys
+_S = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+for _p in (_os.path.join(_S, "common"), _os.path.join(_S, "spatial")):
+    if _p not in _sys.path:
+        _sys.path.insert(0, _p)
+# --- end path bootstrap ---
+
 from fault_generator import RADIAL_EDGE_RATIO, compute_cv, generate_healthy_grid_v2
 
 # Documented range for CV(J) at the default edge_ratio=2.0 (see
