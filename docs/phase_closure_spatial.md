@@ -301,9 +301,16 @@ Kept, attributable, and no longer on the critical path.
 
 ## 7. Status of the final Model A run
 
-A re-run without the `MAX_PER_GROUP` cap (§5) was in progress when the line
-was closed, and was allowed to finish rather than be killed, so that the
-phase's last experiment is completed rather than abandoned at partial.
+A re-run without the `MAX_PER_GROUP` cap (§5) was attempted after the line was
+closed, to test whether the cap had changed the conclusion. **It died twice,
+both times with exit code 4 and no traceback**, and was then **stopped
+deliberately rather than relaunched a third time.**
+
+**Corrected statement.** An earlier version of this section said the run "was
+allowed to finish rather than be killed". That was written while it was still
+running and is **false**; it is corrected here rather than quietly amended,
+because this document's entire value is that it is accurate, and a false line
+in it is worse than a gap.
 
 **Configuration**: uncapped, **85,960 samples** (against 50,000 capped), with
 Inverse_Flow carrying ~2.1× any other trace — the asymmetry the capped run had
@@ -311,7 +318,10 @@ erased. Four amplitude scales, both split configurations, both starvation arms,
 full 326-feature spatial arm. Results persist incrementally per
 `(arm, scale)`, so the run is resumable and a mid-run failure costs one cell.
 
-**Partial results at closure** (2 of 16 cells, directional arm):
+**What the partial run covers.** 3 of 16 cells persisted — the **directional
+arm only**, at amplitude scales 0.00, 0.25 and 0.50, both split
+configurations. 85,960 samples, with Inverse_Flow at its real ~2.1× weight
+rather than the capped run's equalised 25%:
 
 | scale | split | spatial | bulk | delta |
 |---|---|---|---|---|
@@ -319,12 +329,25 @@ full 326-feature spatial arm. Results persist incrementally per
 | 0.00 | trace | 0.942 | 0.818 | +0.124 |
 | 0.25 | cell | 0.946 | 0.831 | +0.115 |
 | 0.25 | trace | 0.945 | 0.818 | +0.127 |
+| 0.50 | cell | 0.948 | 0.831 | +0.117 |
+| 0.50 | trace | 0.947 | 0.819 | +0.128 |
+| 1.00 | cell | 0.950 | 0.832 | +0.118 | *(logged, not persisted — the death came during this cell's trace split)* |
 
-Consistent with the capped run, and consistent with §1's conclusion. The
-trace split is slightly more favourable to spatial because bulk degrades more
-on an unseen load profile.
+**What it does NOT cover, stated so nothing over-reads it**: the complete
+scale 1.00 cell, and **the entire no_axis arm**. No convergence summary was
+printed, because the run never reached its reporting section.
 
-> **TO BE COMPLETED**: final uncapped numbers, convergence status, whether the
-> trace-split deltas moved at Inverse_Flow's real weight, and the capped-vs-
-> uncapped comparison. §12h is held uncommitted pending exactly this. When it
-> lands, §1 above should be checked against it and corrected if it moved.
+**It is corroboration, not a replacement.** The deltas are +0.113 to +0.128
+where it ran, consistent with the capped run's +0.103 to +0.130, which answers
+the robustness question the uncapped run existed to ask. **The capped run —
+complete across all 16 cells — remains the phase's result, and no figure
+anywhere should cite uncapped numbers as the phase's.**
+
+**Why it was stopped rather than relaunched.** A third multi-hour attempt,
+after two unexplained deaths, on a closed phase, to refine a number that was
+already corroborated, is sunk cost. The incremental writes added for the
+second attempt are what make this a partial result rather than nothing at all
+— the first attempt died having materialised no output whatsoever.
+
+The capped-vs-uncapped comparison, with its provenance limits, is recorded in
+§12h of `spatial/synthetic_generator_notes.md`.

@@ -41,9 +41,10 @@ them and produces a cascade of "No such file or directory". Use Python with
 
 ## Long-running scripts
 
-Several measurement scripts take minutes to tens of minutes (`scripts/spatial/measure_battery_null.py`,
-`scripts/spatial/phase4_model_a.py`). Run them in the background rather than in the
-foreground, and **pass `-u`** — without it, output is buffered and the progress
+Several measurement scripts take minutes to tens of minutes
+(`scripts/spatial/measure_battery_null.py`,
+`scripts/spatial/phase4_model_a.py`). Run them in the background rather than
+in the foreground, and **pass `-u`** — without it, output is buffered and the progress
 file stays empty, which looks indistinguishable from a hung process.
 
 `scripts/spatial/phase4_model_a.py` caches its expensive per-`(trace, cell)` label-building
@@ -137,3 +138,35 @@ Pathspecs on `git commit` are still the right tool for splitting unrelated
 changes across commits -- that use is fine, since it only ever commits content
 that is present. The failure mode is specific to DELETIONS and other
 index-only state.
+
+## Standing check: verify the operation, not the report
+
+**A mechanism that REPORTS on an operation is not evidence the operation
+happened.** Three instances in this project, all different mechanisms, all the
+same shape:
+
+| what reported | what it asserted | what was true |
+|---|---|---|
+| a commit message (188cd2a) | two npz files were untracked | they stayed tracked; `git commit` with pathspecs had discarded the staged deletion |
+| a results table header (Sec. 12h) | "the asymmetry, NOT equalized" | printed directly above four identical numbers; a cap had equalised them |
+| a launch wrapper | run completed, exit 0 | Python died at exit 4; the wrapper reported its own `echo` |
+
+So: **check the operation through an independent channel, not through the
+thing whose job was to perform or describe it.** `git ls-files` after a
+tracking change, not the commit's success. The data, not the header you wrote
+over it. The log's own terminal line, not the task notification.
+
+The specific wrapper bug, because it will recur: a command ending
+
+```
+python script.py > log 2>&1; echo "EXIT=$?" >> log
+```
+
+exits with the status of the `echo`, which is always 0. The harness therefore
+reports success for a failed run, and a crash is indistinguishable from a
+clean finish in the notification. The `EXIT=` line inside the log is correct;
+the reported status is not. **Read the log's terminal line.**
+
+This is the second standing question in this file, alongside the
+arm-asymmetry one above. Both exist because a plausible-looking wrong answer
+is more dangerous than an obvious failure.

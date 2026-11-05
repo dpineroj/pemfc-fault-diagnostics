@@ -2,7 +2,7 @@
 
 > **SCOPE — this document describes a CLOSED line of work.** The
 > spatially-resolved fault-detection phase was closed in November 2026; see
-> [`phase_closure_spatial.md`](../phase_closure_spatial.md) for the result, the
+> [`../phase_closure_spatial.md`](../phase_closure_spatial.md) for the result, the
 > reasoning and what stands independently.
 >
 > **Its findings stand as recorded.** Where this document says "the project",
@@ -776,6 +776,33 @@ independent reason that framing does not deliver what it promised.
 materially different template, or a form derived without reference to this
 dataset. Neither is available. The honest scope is the narrow claim above.
 
+#### A SECOND narrowing, from Phase 4's adoption of all four load traces
+
+Recorded here when the decision was taken, not discovered during the writeup.
+
+Phase 4 Model A trains on synthetic data driven by **all four** of the real
+dataset's load traces, not `Normal_Flow` alone (§12c). That buys episode-timing
+diversity, which is the only available defence against the load-leakage risk
+§12b measures. It also couples training to the Phase 5 holdout, and the
+coupling must be stated precisely rather than as a general flag:
+
+- **What is used**: `INTENSIDAD`, a **bulk scalar** channel from the Seville
+  recordings, min-max normalized per run to a 0–1 load ratio.
+- **What remains held out**: the **spatial current grids**. No real healthy
+  spatial grid enters training, model selection, or feature construction in
+  any form. The §6f claim above is unaffected on that axis.
+- **What this costs**: Phase 5 can **no longer claim quietness on unseen
+  operating conditions**. It can claim quietness only on **unseen spatial
+  realizations of operating conditions the model has already seen**, because
+  the load trajectories it is validated against are the ones that drove its
+  training data.
+
+So of the two generalization claims Phase 5 might have made, **the spatial one
+survives and the operating-condition one does not.** This is a real reduction
+in what Phase 5 establishes, accepted deliberately in exchange for Model A
+being testable at all, and it stacks with the structural narrowing above
+rather than replacing it.
+
 ### 6g. ADOPTED bounds — and an asymmetry that must be carried forward
 
 **Adopted.** Stated with what sets each bound and where the real sessions
@@ -1296,7 +1323,7 @@ has established does not exist and cannot be produced without hardware. Stated
 in the same register as §6d: the limitation is to be reported, not managed
 away.
 
-**Substantiated, not merely asserted — see `external_fault_datasets.md`
+**Substantiated, not merely asserted — see `docs/spatial/external_fault_datasets.md`
 §2.** Two independent real fault-labelled PEMFC datasets have now been
 audited, Kim et al. (2023) and Zhou et al. (2022), and **both are
 static-load**; neither is spatially resolved, neither covers starvation, and
@@ -2234,3 +2261,391 @@ test code. Any future reader weighing these should treat the Test 1 and Test 2
 thresholds as commitments and the Test 3 threshold as a bounded judgement
 call.
 
+
+---
+
+## 12. Phase 4 Model A — design, fixed before implementation
+
+Snapshot fault classifier: one timestep in, class out (healthy / drying /
+flooding / starvation). Two arms on identical underlying data; the delta
+between them is the project's central result. **No time windows, no sequences,
+no prediction** — that is Model B.
+
+Recorded before any Model A code was written, in the §11b discipline: the
+decisions below cannot drift to accommodate a result.
+
+### 12a. The episode-vs-timestep inversion — a finding in its own right
+
+Measured on one run, near-seam timesteps excluded (362 of 3739, 9.7%):
+
+| | healthy | starvation | flooding | drying |
+|---|---|---|---|---|
+| **episodes** | — | **34** | 24 | **9** |
+| **timesteps** | 795 | **212** | 1333 | **1037** |
+
+**The two orderings invert.** Starvation is the episode *majority* (34) and the
+timestep *minority* (212); drying is the episode minority (9) and the second
+largest by timesteps (1037). The cause is onset duration: starvation episodes
+last 2–5 s, drying episodes 30–90 s.
+
+**Consequence: Model A and Model B need different class-balance decisions from
+the same generator**, and that is not obvious from either count alone. Model A
+is a snapshot classifier, so it works on timesteps — its minority class is
+**starvation**, 6.3× under flooding. Model B works on sequences or episodes —
+its scarce class is **drying**, at 9. Any balance decision must state which
+unit it is in. The precursor measurement compounds this: drying is Model B's
+scarce class *and* the only fault with a usable spatial precursor.
+
+### 12b. Three measured risks that shaped this design
+
+All measured before the design was fixed; each one changes it.
+
+**Risk 1 — the temperature grid leaks the label.** At severity 0.9:
+
+| | mean(T) | std(T) | spatial corr(T, J) |
+|---|---|---|---|
+| healthy | 81.48 | 0.62 | 0.97 |
+| flooding | 75.01 | 0.16 | 0.67 |
+| drying | 85.48 | 1.12 | 0.98 |
+| starvation[directional] | 78.53 | 0.94 | 0.90 |
+| starvation[no_axis] | 77.97 | 0.23 | 0.70 |
+
+Between-class gaps of 3–10 K dwarf within-class spreads of 0.2–1.1 K, so
+`mean(T)` alone is a near-perfect four-class label — and it derives from the
+hardcoded per-fault `base_t` constants (70 / 69 / 68 / 73), which are
+notebook-01-derived tuned-or-assumed values, not physics.
+
+**Risk 2 — `mean(J)` alone is already near-perfect.** Pairwise best-threshold
+accuracy on that single scalar at severity 0.9: healthy against every fault
+**1.000**; drying–starvation 1.000 / 0.996; flooding–starvation 0.995 / 0.990.
+Only **flooding–drying at 0.790** is genuinely hard.
+
+**Risk 3 — `load_ratio` alone reveals the class**, because episodes are
+*triggered by* load events. In-sample four-class upper bounds on a real run:
+
+| features | accuracy | macro-F1 |
+|---|---|---|
+| load_ratio alone | 0.872 | 0.684 |
+| mean(J) alone | 0.762 | 0.629 |
+| **mean(J) + load_ratio** | **0.938** | **0.871** |
+
+**Together these mean the bulk arm starts near ceiling**, leaving the spatial
+arm almost no headroom — and for artifactual reasons, not physical ones. This
+is §10's standing test firing in the **deflating** direction: a design that
+hands the spatial arm a guaranteed near-tie decides the comparison before it
+is measured, exactly as a free win would.
+
+### 12c. Decisions
+
+**Temperature: EXCLUDED from both arms.** Three reasons, and the third is the
+structurally decisive one:
+
+1. Risk 1's measured label leakage, from tuned-or-assumed constants.
+2. The synthetic temperature field is a deterministic affine function of the
+   current grid plus noise (spatial corr 0.67–0.98), so it adds little
+   independent spatial information.
+3. **Our synthetic temperature is 18×18; the real sensor's is 9×9.** Including
+   it would build a resolution mismatch into the model that Phase 5's
+   validation path cannot accommodate — **incompatible regardless of the
+   leakage question**, which is why this reason stands alone.
+
+**Arms.**
+
+- **Spatial**: the 324 raw 18×18 current values **plus the two bulk scalars**.
+  A spatially-resolved sensor also reports the mean, so spatial is a strict
+  **superset** of bulk. The delta therefore measures the *added value of
+  resolution*, and a zero delta is a clean negative result rather than an
+  artifact of withholding information.
+- **Bulk**: `mean(J)` and `load_ratio`. Nothing else.
+- **Excluded from bulk, and why**: CV(J), σ(J) and every other spatial
+  statistic — they require the grid, so including them would make the "bulk"
+  arm secretly spatial and destroy the comparison; the temperature grid and
+  `mean(T)` (Risk 1); `severity`, `onset_field_s`, `active_fault_type` as
+  label-adjacent; `segment_id` and timestep index as identity proxies.
+
+**Load traces: all four gas configurations**, grouping by (trace, cell). The
+Phase 5 coupling this creates is recorded in §6f, precisely rather than as a
+flag: a bulk scalar channel is used, the spatial grids stay held out, and
+Phase 5's operating-condition generalization claim is surrendered while its
+spatial one survives.
+
+**Class balance: accept the imbalance.** `class_weight='balanced'`, per-class
+metrics reported, **no resampling** — oversampling adjacent timesteps
+duplicates near-identical grids and manufactures variety, the same pathology
+the Zhou audit found (`docs/spatial/external_fault_datasets.md` §1d).
+
+**Severity: train on all, evaluate in fixed bins** [0, 0.1), [0.1, 0.3),
+[0.3, 0.5), [0.5, 1.0]. Excluding low severity would hide the regime where the
+question is interesting; including it means some grids are near-healthy *by
+construction* (§11b Test 2 guarantees near-null below 0.05), so aggregate
+accuracy is depressed by a designed-in amount. Binning makes that visible
+instead of letting it contaminate one headline number.
+
+**Model family: multinomial logistic regression on standardized inputs,
+identical for both arms** — same regularization grid, same CV protocol,
+differing only in the feature matrix, so the delta reflects the input and not
+the architecture. A small random forest is reported as a secondary robustness
+check. No CNN and no torch: this is a hypothesis test, not a leaderboard; a
+CNN would introduce architecture choices capable of creating the delta by
+themselves. **If a linear model on raw grids cannot beat two scalars, that is
+itself the finding.**
+
+**Split: leave-(trace, cell)-out as primary**, because Phase 5 applies the
+model to a real cell it has never seen, so this rehearses the actual
+generalization demand, and because holding out whole cells means no adjacent
+timestep ever crosses the fold boundary. Leave-one-segment-out is reported as
+robustness. What each does and does not prevent:
+
+| split | prevents | does NOT prevent |
+|---|---|---|
+| leave-(trace, cell)-out | all adjacency leakage; cell memorization | nothing further, once traces differ |
+| leave-one-segment-out | episode leakage across segments | cell leakage — same cell both sides |
+| time-based within a run | gross temporal leakage | adjacent timesteps still correlated across the boundary |
+
+**near_seam_buffer timesteps are excluded from all sets** (9.7% of a run).
+
+**Both starvation arms run end to end, separately. Neither is promoted**
+(§11d/§11e). Fault states are **not validated output** (§11a) and no Model A
+result may describe them as validated.
+
+**No external dataset trains anything.** Zhou et al. is audited and not
+integrated. The real spatial grids are Phase 5's and must not enter training
+or model selection.
+
+### 12d. Metrics
+
+- **Primary: macro-F1**, not accuracy — 212 starvation against 1333 flooding
+  makes accuracy a majority-class report.
+- Per-class precision and recall, all four classes.
+- **The full 4×4 confusion matrix, reported in full, never collapsed.**
+- **Flooding↔starvation confusion as a separately named metric, per arm.**
+  §11i predicts it specifically for the no_axis arm (0.638 pairwise), so it
+  must be visible rather than buried in an aggregate.
+- Severity-binned macro-F1, per arm.
+- **Delta = spatial − bulk**, per class and per severity bin, with a bootstrap
+  CI over **cell groups** — bootstrapping timesteps would ignore adjacency and
+  understate the interval.
+
+### 12e. Amplitude sensitivity — REQUIRED, not a caveat
+
+Risk 2 and Risk 3 put the bulk arm at 0.938 / 0.871 in-sample against a
+falsification criterion that declares the test uninformative above 0.95. That
+outcome is **close to the expected one, not a remote possibility**, and the
+cause is identified: the per-fault uniform-loss constants (0.20 / 0.25 / 0.25)
+make `mean(J)` nearly diagnostic by itself, and they were chosen for plausible
+full-severity magnitude loss **with no consideration of whether they would
+make the bulk arm trivially strong**.
+
+So Model A is run **across a range of those amplitudes**, and the delta is
+reported as a function of them. The spatial-component amplitudes are held
+fixed, so spatial information content stays constant while bulk information
+varies — which isolates bulk headroom as the variable.
+
+**Per §11 the amplitudes are NOT changed. This is measurement across them,
+not retuning**, and the committed defaults remain the committed defaults.
+
+**Interpretation, pre-committed before measuring:**
+
+1. **Delta positive and stable across the amplitude range** — spatial sensing
+   helps, robustly, and the result does not hinge on the amplitude choice.
+2. **Delta appears only at low amplitudes** — the result **depends on a
+   tuned-or-assumed constant** and must be reported as conditional on it, not
+   as a general finding about spatial sensing.
+3. **Bulk at ceiling across the whole range** — **Model A has no headroom and
+   cannot test the hypothesis on this generator.** Report that, and state what
+   would be needed to make it testable.
+
+### 12f. Falsification — committed before implementation
+
+1. **If spatial − bulk macro-F1 ≤ 0 with a CI including zero, in the severity
+   bins where bulk is not at ceiling, then spatial sensing does not help
+   snapshot classification on this generator**, and that is reported as the
+   result.
+2. **A positive delta confined to bins where bulk is already at ceiling is not
+   evidence** and will not be reported as support.
+3. **If bulk macro-F1 > 0.95 in every bin, Model A is uninformative regardless
+   of the delta** — report that the test had no headroom rather than
+   presenting a small delta as a finding.
+4. Any reported delta carries the §12e amplitude conditionality.
+
+### 12g. A measurement-integrity finding: arm-asymmetric fitting failure
+
+Caught by a smoke test before Model A produced any reportable number, and
+recorded here rather than only in `CLAUDE.md`, because it is a finding about
+how to measure a two-arm delta, not an environment quirk.
+
+**What happened.** The first implementation used
+`LogisticRegression(max_iter=300)`. At that setting the **spatial arm (326
+features) did not converge, while the bulk arm (2 features) converged
+cleanly.** A non-converged fit understates its own score, so the effect was
+to penalise the spatial arm specifically and **drive the delta toward zero.**
+
+**Why it matters more than an ordinary bug.** It would have fired §12f's "no
+headroom / delta absent" branch for a reason with **nothing to do with the
+hypothesis** — a tooling choice, not the data — and the output would have
+looked like a clean negative result. `sklearn` emits a convergence warning,
+but warnings are easy to filter and easier to miss, so the defect was close to
+invisible. **This is §10's failure mode in the deflating direction**: the
+comparison decided before it is measured, this time against the hypothesis
+rather than for it.
+
+**The fix is the assertion, not the `max_iter` bump.** `max_iter` is now 5000,
+but the durable part is that `evaluate()` **checks `n_iter_` against
+`max_iter` on every fit**, collects any failure into `NONCONVERGED`, and prints
+it at the end of the run. A raised limit silently stops being enough when the
+feature count or sample size changes; an assertion does not.
+
+**Standing practice, generalized** (and recorded in `CLAUDE.md` as a question
+to ask): any multi-arm comparison in this project must assert convergence — or
+the equivalent fit-quality condition for whatever estimator is used — **per
+arm**, and report it. The reason is specific and worth stating in full: the
+arms differ in dimensionality by construction, so a fitting failure is
+*expected* to hit them asymmetrically, and an asymmetric fitting failure
+biases the delta in a direction that **looks exactly like a substantive
+result**.
+
+**The catch was luck, not process, and that is the part worth recording.**
+`sklearn` *did* emit a convergence warning — but the real job runs with
+**`-W ignore`**, so on the actual experiment the warning was **actively
+suppressed**. It surfaced only because a smoke test happened to print to a
+terminal that was being read at the time. Had the full run completed first,
+the biased delta would have been reported with no indication anything was
+wrong.
+
+**So: a suppressed warning is not a weaker signal than an assertion — it is no
+signal at all, and the two cases are indistinguishable in the output.** Any
+check in this project that depends on a warning being *visible* must be
+converted into an **assertion** or an **explicitly returned status**. The real
+job's `-W ignore` is not going away: it exists because `sklearn` and `numpy`
+emit high-volume warnings that would otherwise bury the measurement output.
+That makes warning-based checks structurally unreliable here, not merely
+fragile.
+
+**Reporting rule**: convergence status is reported **before** any numbers. If
+any fit failed to converge, the affected numbers are **not reportable**.
+
+### 12h. Three things the first Model A run got wrong, recorded
+
+Same register as §12g. A project that logs only its correct predictions is not
+keeping score.
+
+#### 1. A runtime constant silently equalized the traces
+
+Model A caps each `(trace, cell)` group at `MAX_PER_GROUP` timesteps. The cap
+was introduced at 2500 **for runtime**, before the leave-one-trace-out
+configuration existed.
+
+Every trace has at least 2500 usable timesteps per cell, so the cap **bound on
+all four of them** and equalized the design: 5 cells × 2500 = 12,500 samples
+per trace, 25.0% each, every fold exactly 12,500. Inverse_Flow's ~6,500 usable
+timesteps per cell were cut to 2,500 — about 62% of its data unused.
+
+**That contradicted an explicit instruction** — do not reweight or subsample to
+equalize; make the asymmetry visible — as a *side effect* of a constant that
+predated it. The leave-one-trace-out test exists specifically to expose that
+Inverse_Flow carries roughly twice the weight of any other trace, and the cap
+removed the thing being tested.
+
+**The reporting made it worse.** The per-trace table printed the header
+"the asymmetry, NOT equalized" directly above four identical numbers. An
+assertion that the opposite of the truth had happened is worse than printing
+the numbers bare, because it discourages the reader from noticing. Both the cap
+and that header are fixed; `MAX_PER_GROUP` now defaults to `None` with a
+comment stating it may be set only to bind on nothing, never to make folds
+comparable.
+
+The capped run's numbers are **kept, not overwritten**, and reported beside the
+uncapped ones: if the deltas are materially unchanged that is a robustness
+result, and if they move the uncapped run is the one that answers the question.
+
+**Generalization**: a constant adopted for one reason (speed) can satisfy or
+violate a requirement adopted later (exposing an asymmetry), and nothing
+connects them. When an instruction is about the *shape* of the data, the
+constants that shape it have to be re-read, not just the code written since.
+
+#### 1b. Capped vs uncapped — the comparison, and its three limits
+
+Recorded as the true state rather than held open for a comparison that will
+not arrive.
+
+**Fact one — the capped numbers are TRANSCRIBED, and their authoritative log
+is lost.** The capped run completed all 16 cells, and its figures throughout
+§12 come from the report written off that run. The log file itself, and a copy
+deliberately preserved beside it, were both lost to temp-directory clearing.
+**The numbers are therefore second-hand within this project**, which is a
+weaker provenance than every other figure in this document, and the weakness
+is stated rather than paid off: re-running a complete capped configuration to
+regenerate a log, for a closed phase whose numbers are already corroborated,
+is not worth a multi-hour run. The lesson about *where* preserved artifacts
+must live is in `CLAUDE.md`.
+
+**Fact two — the uncapped run is partial, and consistent where it ran.** 3 of
+16 cells persisted (directional arm, scales 0.00 / 0.25 / 0.50, both splits),
+at 85,960 samples with Inverse_Flow carrying its real ~2.1× weight:
+
+| | capped (complete) | uncapped (partial) |
+|---|---|---|
+| samples | 50,000 | **85,960** |
+| per-trace share | 25.0% each (equalised by the cap) | **unequal; Inverse_Flow ~2.1×** |
+| delta, split=cell | +0.103 to +0.123 | +0.113 to +0.118 |
+| delta, split=trace | +0.109 to +0.130 | +0.124 to +0.128 |
+
+**The cap did not change the conclusion.** That is the whole question the
+uncapped run existed to answer, and it is answered.
+
+**Fact three — the uncapped run is incomplete and was deliberately not
+resumed.** It died twice at exit code 4 with no traceback either time. It
+never covered the complete scale 1.00 cell or **any** of the no_axis arm, and
+printed no convergence summary. **The capped run remains the phase's result**;
+uncapped figures are corroboration and must not be cited as the phase's
+numbers.
+
+**On publishing this rather than holding it.** §12h was held uncommitted
+pending the full uncapped comparison. That comparison will never exist, so
+holding the document indefinitely would be worse than publishing it with its
+limits stated — which is the same principle §11a applies to the fault patterns
+themselves.
+
+#### 2. A pre-registered expectation was falsified — §12f criterion 3
+
+§12b measured the bulk arm at **0.938 accuracy / 0.871 macro-F1** and §12e
+recorded that §12f's "no headroom" branch was therefore "close to the expected
+one, not a remote possibility." That expectation was stated twice and **it was
+wrong.** Criterion 3 did not fire: bulk reaches **0.822–0.836** macro-F1
+out-of-sample and never approaches the 0.95 ceiling.
+
+**Why the expectation was wrong, which is the part worth keeping.** The
+0.938/0.871 figures were **in-sample, on a decision tree**, computed as an
+upper bound on what two features could carry. They were used as though they
+estimated what the bulk *arm* would score. They do not: the real bulk arm is a
+2-feature multinomial logistic regression evaluated **out-of-fold under a
+grouped split**, which is a different estimator on unseen groups. An in-sample
+tree bound overstates an out-of-sample linear score, and nothing in §12b
+flagged the substitution.
+
+**Generalization**: an in-sample upper bound on a feature set's information
+content is not a forecast of a specific estimator's out-of-sample score, and
+should not be used to predict whether a test will have headroom.
+
+#### 3. A third of the delta is the linear boundary, not information content
+
+The random-forest check is specified in §12c as secondary, but one of its
+numbers belongs in how the headline result is framed rather than in a
+robustness appendix.
+
+| estimator | spatial | bulk | delta |
+|---|---|---|---|
+| logistic regression | 0.945 | 0.822–0.828 | **+0.117 to +0.123** |
+| random forest | 0.962–0.969 | 0.887–0.896 | **+0.066 to +0.082** |
+
+The stronger estimator raises **both** arms but raises bulk more, closing
+roughly **a third** of the delta. So part of the logistic delta is **the
+2-feature linear decision boundary**, not the information the bulk channel
+carries: two features with a nonlinear boundary do better than two features
+with a linear one, and the spatial arm's advantage shrinks accordingly.
+
+The delta remains clearly positive under both estimators, with the same sign
+and the same per-class story. But the honest statement of magnitude is
+**"+0.07 to +0.12 depending on estimator"**, not "+0.12", and any headline
+number quoted from the logistic arm alone overstates the information-content
+gap by about a third.
