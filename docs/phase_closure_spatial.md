@@ -420,7 +420,7 @@ from the grid, not that no model could.
 The real spatial dataset is healthy-only and was held out of every training
 and selection step for this purpose; the script asserts the real-data loader
 had not been imported when the final models were trained. Criterion, fixed
-and committed before the run (§14, commit `153f5b1`): false-alarm rate
+and committed before any Phase 5 code existed (§14, commit `fc3fb28`): false-alarm rate
 ≤ 5% on **all four** real recording configurations; > 50% means the model
 learned the simulator.
 
