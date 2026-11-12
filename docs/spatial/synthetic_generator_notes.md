@@ -2649,3 +2649,407 @@ and the same per-class story. But the honest statement of magnitude is
 **"+0.07 to +0.12 depending on estimator"**, not "+0.12", and any headline
 number quoted from the logistic arm alone overstates the information-content
 gap by about a third.
+
+### 12i. The final uncapped attempt — rule fixed before launch
+
+Recorded and committed before the run is launched (completion campaign,
+November 2026).
+
+- **One attempt, no more.** Resumes from the three persisted cells
+  (`run_logs/model_a_results/`), incremental writes per `(arm, scale)` cell,
+  design matrix freed between cells — both already in the script.
+- The launch wrapper must propagate **Python's** exit status and write it as
+  the log's terminal line (the earlier wrapper reported its own `echo`; see
+  `CLAUDE.md`, "verify the operation, not the report").
+- BLAS threads are capped for this job so it cannot starve Model B. That is a
+  scheduling choice with no effect on any fitted number.
+- **If it dies: no third attempt.** Partial coverage is recorded and the capped
+  run remains the phase's result.
+- **A fork the brief does not cover, decided here:** thirteen remaining cells
+  at the observed ~2.4 h each is ~31 h. If the run is still alive when every
+  other campaign item is complete, it is **stopped and its coverage recorded
+  exactly as a death would be.** Reason: this is corroboration of a closed
+  phase, not the campaign's purpose, and holding the close-out for it would
+  invert that priority. Whatever cells exist at that point are reported, and
+  what they do not cover is stated.
+- Convergence is asserted per fit as before; the capped numbers stay
+  transcribed (§12h) and the capped configuration is **not** re-run.
+
+---
+
+## 13. Model B — predictive model, design fixed before implementation
+
+**Committed before any Model B code exists and before any Model B measurement
+is taken.** The git history is the evidence: this section predates
+`scripts/spatial/phase4_model_b.py`. Every threshold and interpretation branch
+below is binding; §13k says what happens if one of them is later regretted.
+
+Nothing here reopens the closure (`../phase_closure_spatial.md`). The economic
+objection stands however this comes out. §11a applies in full: fault patterns
+are coherent and literature-grounded, **not validated**, and no Model B number
+is real-fault prediction accuracy.
+
+### 13a. Why generation is the only route — and what that costs
+
+**Bounded search, three queries, run before this section was written.**
+Nothing published since the last audit pairs labeled faults with dynamic
+loading in a public deposit, spatial or not. What surfaced: two Mendeley
+deposits from one group (flooding/dehydration, 2019 and 2021; bulk signals; no
+indication of dynamic loading — not downloaded, not audited, and by the Zhou
+precedent a bulk-only static set would be audited and not integrated anyway);
+a 2025 durability deposit that is not fault-labeled; and several 2025 papers
+classifying faults with no public data visible. The one live lead — a
+physics-guided LSTM study with flooding, drying, air- and hydrogen-starvation
+classes under dynamic conditions, bulk-only, referenced rather than deposited
+— gets a drafted, **unsent** request in `data_requests.md`. The campaign does
+not wait on it.
+
+**So the generator is the dataset**, for the reason both audits established
+(`external_fault_datasets.md` §2): inducing a *controlled, labeled* fault
+requires holding conditions fixed, which conflicts with capturing it under
+dynamic loading, and no one has deposited spatially resolved labeled faults at
+all.
+
+**What that costs, stated before any result exists:** every Model B figure is
+a statement about this generator's severity trajectories and spatial
+modulations. The onset shapes are literature-grounded and tuned
+(`SEVERITY_CONVEXITY`, the per-fault time constants); the measured precursor
+windows that fix the horizons below are *properties of those tuned
+trajectories*. A real cell could have longer or shorter precursors. Model B
+can show whether a model *achieves the horizons the generator permits*; it
+cannot show those horizons are real.
+
+### 13b. Generation volume — drying minimum, PRE-REGISTERED BEFORE MEASUREMENT
+
+Drying is the only fault with a precursor long enough for a multi-second
+horizon, and it is the scarce class by episodes (9 of 67 on the Normal_Flow
+trace, 6 crossing threshold).
+
+**Unit of independence.** If trigger timing is a deterministic function of the
+load trace (to be verified empirically, §13b-i), then the five cells drawn per
+trace replay the *same* drying dwell events with different cells and severity
+trajectories. The independent unit is then the **distinct load-trace event**,
+not the (trace, cell) episode.
+
+**Pre-registered minimum: 30 distinct drying trigger events across the four
+traces, with at least 5 in every trace.**
+
+- 30, because the headline drying quantity is a recall-type proportion over
+  events and the worst-case binomial 95% half-width at n = 30 is
+  1.96·√(0.25/30) ≈ 0.18 — the coarsest resolution at which "predicts" and
+  "does not predict" remain distinguishable. Below 30 the interval swallows
+  the claim.
+- ≥ 5 per trace, because the leave-one-trace-out split evaluates on one
+  trace's events alone, and a fold with fewer than 5 is an anecdote.
+
+**(i) Verification owed before designing around determinism:** confirm
+empirically that for a fixed trace, different seeds give identical trigger
+event counts and timing. If seeds *do* move triggers, the unit becomes the
+(trace, cell) episode, the minimum of 30 applies to those, and this paragraph
+is superseded in place.
+
+**(ii) Decision rule.** If the achievable count meets the minimum: proceed.
+If not: the minimum is **not lowered** and Model B is **not** quietly run as
+though it were met. Drying is run on the episodes that exist and reported as
+**explicitly underpowered** — count achieved, count required, finding
+*indicative rather than established*. Starvation and flooding are unaffected.
+
+**(iii) §10 check on volume.** More traces and more cells change which load
+contexts and which cells both arms see; they do not touch spatial geometry and
+reach both arms identically. No volume change may alter a fault's spatial
+modulation or amplitude. Seeds beyond the existing five cells per trace are
+*not* added to inflate the drying count: if events are trace-deterministic,
+extra cells add no independent events, and counting them would manufacture n.
+
+### 13c. The task — early warning, not persistence
+
+**Given a window of recent history ending at t, predict the fault state at
+t + h.** Two arms on identical data, identical model, differing only in input.
+
+**Restricted to windows in which no fault is yet confirmed.** A window is
+*eligible* iff max severity over the window is below
+`CLASSIFICATION_THRESHOLD` (0.5). Reason: for a window that already contains a
+confirmed fault, "the state at t + h" is almost always "the state at t" — the
+snapshot question Model A already answered. Including those windows would let
+both arms score on persistence and report it as prediction. Eligibility is
+defined on true severity, which neither arm sees, and applies to both arms
+identically (§10: it cannot move the delta).
+
+**Label** = state at t + h, constructed as:
+
+| severity at t + h | label |
+|---|---|
+| exactly 0 (no active episode) | `none` |
+| ≥ 0.5, fault type f | `f` (confirmed) |
+| in (0, 0.5) | **window excluded** — target is "developing, unconfirmed"; calling it `none` would punish a model for detecting a real precursor, calling it `f` would label an unconfirmed fault |
+
+A **healthy window** is an eligible window whose target is `none`. It may
+contain sub-threshold severity inside the window (a fault that recedes); those
+are legitimate hard negatives and are kept.
+
+**Positives are stratified, because the strata mean different things:**
+
+- **precursor-visible** — max severity in the window > 0. Spatial information
+  exists in the input.
+- **blind** — severity is exactly 0 throughout the window. The grids are
+  healthy grids. Nothing spatial distinguishes them, by construction; any
+  skill here can only come from the load trace, which the bulk arm sees too.
+
+### 13d. Horizons and lookbacks — per fault, each justified
+
+A shared horizon is incoherent: the measured precursor windows are starvation
+1.2–3.9 s (median 2.1), flooding 2.3–8.4 s (median 4.1), drying 25.9–67.3 s
+(median 47.8), and at 30 s starvation and flooding grids *are* healthy grids.
+
+**Horizon rule (one rule, applied to all three):** the largest lead in the
+already-measured sweep {1, 2, 5, 10, 20, 30, 45, 60 s} that does not exceed
+**half the fault's median precursor window**. Half, so that a typical episode
+offers precursor-visible windows at that lead rather than exactly one.
+
+| fault | median window | half | **horizon h** | measured separability at that lead |
+|---|---|---|---|---|
+| starvation | 2.1 s | 1.05 | **1 s** | 0.711 directional / 0.567 no_axis |
+| flooding | 4.1 s | 2.05 | **2 s** | 0.653 |
+| drying | 47.8 s | 23.9 | **20 s** | 0.655 |
+
+**Lookback rule:** Kim et al.'s 45 s is not inherited — it came from 10-hour
+static holds and has the same transfer problem as their horizon. The lookback
+is **the fault's median precursor window in samples, rounded up, minimum 3**
+(three samples is the fewest that fit a trend with a residual): the window
+should span the dynamic it is trying to see, and no more, since every extra
+sample costs seam-excluded windows.
+
+| fault | **lookback L** |
+|---|---|
+| starvation | **3 s** |
+| flooding | **5 s** |
+| drying | **48 s** |
+
+Each fault is run as its own configuration `(h, L)`; inside each, the model is
+4-class (`none` + three faults at *that* horizon) and **only the
+configuration's own fault is its result.** Results are never aggregated
+across faults.
+
+**Negative control (pipeline check, not a result):** starvation and flooding
+configurations re-run at **h = 30 s** (Kim et al.'s horizon). There every
+positive is blind by construction, so any skill is load-trace reading and the
+spatial-minus-bulk delta must be indistinguishable from zero. A nonzero delta
+there is an artifact alarm (§13i criterion 4).
+
+### 13e. Windows, seams, and continuity
+
+- Windows are index-based on the 1 Hz series: input samples `t−L+1 … t`,
+  target at `t+h`.
+- **No window may touch a seam.** A window is dropped if *any* sample in
+  `t−L+1 … t+h` carries `near_seam_buffer`, or if the span crosses a
+  `segment_id` change. This extends the per-timestep flag to windows.
+- A window is dropped if its span contains a time gap (consecutive stamps more
+  than 1.5 s apart), since the slope feature assumes uniform spacing.
+- Counts dropped by each rule are reported.
+
+### 13f. Architecture — the simplest thing that can represent a trend
+
+**Per input channel, two numbers summarise the window: its last value
+(level) and its least-squares slope over the lookback (trend). A multinomial
+logistic regression is fit on those, identically in both arms.**
+
+- spatial arm: 324 grid cells + mean(J) + load_ratio = 326 channels → **652
+  features**
+- bulk arm: mean(J) + load_ratio = 2 channels → **4 features**
+
+Why this and not a recurrent network:
+
+- It *is* a sequence model in the sense that matters — a linear model over a
+  fixed two-element temporal basis (constant, linear) per channel, i.e. a
+  constrained version of logistic regression on the flattened window. A
+  snapshot classifier cannot represent a trend; this can, and it is the
+  smallest step past Model A that can.
+- **It cannot create the delta.** No architecture choice differs between arms;
+  the temporal basis is fixed, not learned, so the spatial arm gets no extra
+  representational freedom beyond its extra channels.
+- Continuity with Model A: same estimator family, same convergence assertion,
+  so a Model A → Model B difference is attributable to the temporal features.
+- No new dependency. torch is not installed and nothing here needs it.
+
+What this deliberately gives up: nonlinear temporal structure (curvature,
+oscillation phase). If neither arm predicts, that is one of the things the
+result cannot distinguish from "no precursor is learnable" — and §13i says so.
+
+**Asymmetric-tooling check (CLAUDE.md), answered here:** 652 vs 4 features.
+Things that scale with dimension and how each is held: *solver* — `lbfgs`
+(cost linear in features; newton-cholesky's Hessian is (652·4)² and
+impractical), with Model A's measured solver-neutrality between the two
+(delta shift +0.0003) as the reason this is not itself a confound;
+*iterations* — `max_iter` set far above need and **convergence asserted per
+fit** into an explicit `NONCONVERGED` list reported before any number;
+*regularisation* — identical `C = 1.0` on standardised features in both arms
+(a fixed C does regularise 652 coefficients more in aggregate than 4; that
+handicaps the *spatial* arm if anything, the conservative direction for a
+claim of spatial advantage, and it is recorded rather than tuned);
+*standardisation* — fit on the training fold only.
+
+Temperature stays excluded from both arms, for all three §12c reasons.
+
+### 13g. Balance, splits, both starvation arms, the binary comparison
+
+- **Class balance will shift again under windowing** and is measured and
+  reported per configuration before any model result. Handling:
+  `class_weight='balanced'`. **No oversampling** — adjacent windows are
+  near-duplicates and duplicating them manufactures variety.
+- **Splits:** GroupKFold on (trace, cell), and LeaveOneGroupOut on trace. Both
+  reported. If they disagree materially, the disagreement is a finding about
+  what the model generalises over and is reported as one.
+- **Both starvation arms run end to end; neither is promoted.** §11e's three
+  branches govern interpretation and are binding. The arms already differ at
+  1 s lead before any classifier exists (0.711 vs 0.567 separability), so a
+  Model B difference between them is read against that gap, not attributed to
+  the model.
+- **Binary healthy-vs-starvation** is run alongside the 4-class starvation
+  configuration, on the same windows with other-fault targets removed —
+  §11i kept this instruction live for Model B because leads are short.
+
+### 13h. Metrics and reporting order
+
+For fault f in its own configuration, one-vs-rest on the 4-class predictions:
+precision, recall, F1, and **Youden's J = recall − false-positive rate**
+(FPR over non-f targets), each for the spatial and bulk arms; recall split
+into precursor-visible and blind positives; the full confusion matrix,
+uncollapsed; **delta = spatial − bulk** on F1 and on J with a 95% bootstrap
+CI resampling **(trace, cell) groups**, never windows.
+
+Reported in this order, always: convergence status; which §13i criterion
+fires; per-fault results at their own horizons; per arm and per split; both
+starvation arms; the binary comparison; confusion matrices; CIs.
+
+### 13i. Falsification and interpretation — fixed in advance
+
+For each fault f, in order:
+
+1. **Uninformative — the test cannot speak.** If bulk F1 for f exceeds 0.95
+   (no headroom), or if fewer than 30 positive windows exist in total for f,
+   the configuration is declared uninformative and no spatial claim is made
+   from it.
+2. **Neither arm predicts.** If J's 95% CI includes or lies below zero in
+   *both* arms, the horizon is **not achieved by this model** for f. Reported
+   as: the separability measurement found a precursor that this predictor
+   did not exploit — or the precursor is not learnable from level-and-trend
+   features. The record's per-fault horizon claim is then *not confirmed* for
+   f and must be amended to say so.
+3. **Spatial does not help.** If delta-F1's CI includes zero or lies below
+   it, spatial sensing does not improve prediction of f at its horizon, and
+   that is reported as the result. A bulk arm that out-predicts the spatial
+   arm is reported as readily as the reverse.
+4. **Artifact alarm.** If on **blind** positives the spatial-minus-bulk recall
+   difference has a CI excluding zero, or if the 30 s negative control shows
+   a delta whose CI excludes zero, the pipeline is leaking something that is
+   not a precursor. The affected fault's delta is **not reportable as spatial
+   advantage** until the leak is identified, and the alarm is reported.
+5. **Spatial helps.** Only if none of 1–4 fires: delta-F1 CI above zero is
+   reported as a spatial advantage in prediction, with the share of it carried
+   by precursor-visible positives stated.
+
+**Horizon achieved (the question the record has only asserted):** for fault f
+and an arm, the horizon is achieved iff J's CI lower bound is above zero.
+
+**Starvation, §11e mapping:** branch 1 if criterion 5 holds in both
+starvation arms; branch 2 if only in the directional arm (then the finding
+depends on an imposed direction the data does not support, reported as that
+limitation, the no_axis arm not dropped); branch 3 if in neither (starvation's
+predictive spatial advantage is not demonstrated).
+
+**Drying:** additionally subject to §13b — if the event minimum is not met,
+whatever fires is reported as indicative, not established.
+
+**Split disagreement:** if a criterion fires under one split and not the
+other, both are reported and the fault's verdict is stated as
+split-dependent.
+
+### 13j. Runs, writes, failures
+
+Incremental, resumable writes per (configuration, starvation arm, split) to
+`run_logs/model_b_results/`; log inside the repo; the log's own terminal line
+is the exit status. Two attempts maximum per experiment; after that the
+partial result is recorded with what it does not cover. A fit that fails to
+converge makes its experiment's numbers unreportable: remedy is a solver
+change with a neutrality check, never fewer samples, arms or features.
+
+### 13k. If a threshold is later regretted
+
+It stands. The wish to change it, the result that prompted the wish, and the
+reason it stands are recorded next to the result.
+
+---
+
+## 14. Phase 5 — the no-false-alarm test, pre-registered
+
+The only point in the project where a trained model meets measured data.
+**Committed before any Phase 5 code runs.** The real grids contain no faults,
+so this does not test detection. It tests whether models trained on synthetic
+faults stay quiet on a genuinely healthy cell.
+
+### 14a. What is run
+
+Final models — Model A (snapshot) and Model B (each fault configuration) —
+trained on **all** synthetic groups at the committed amplitudes, both
+starvation arms, both input arms; applied to every post-warm-up timestep of
+all four real Seville configurations (~5 h each). Seams do not exist in a
+continuous real recording; windows spanning a timestamp gap are dropped as in
+§13e.
+
+### 14b. The input transform — stated because it decides the bulk arm's result
+
+The generator expresses grids in **load-normalised units**: a healthy
+synthetic grid has mean 0.697 at every load, and a fault lowers the mean as a
+*fraction of demanded current not delivered*. A real grid's mean tracks load
+(0.05–0.8 A/cm²). Fed raw, every low-load real timestep would look like a
+massive fault to both arms — a units mismatch, not a finding.
+
+**Transform, fixed here:** each real grid is divided by the bulk-measured
+current density at that instant (`INTENSIDAD` / active area) and multiplied
+by 0.697. `load_ratio` is `INTENSIDAD` min–max normalised per run, exactly as
+in generation. Timesteps with non-finite `INTENSIDAD` are dropped and counted.
+
+**Consequence, stated before the result:** under this transform the bulk
+arm's mean(J) feature is the grid-integral-to-`INTENSIDAD` ratio, which the
+loader's own regression test pins at 1.005 ± 0.008. **The bulk arm is
+therefore quiet nearly by construction** — a real cell under galvanostatic
+load delivers its demanded current. Its quietness is close to a tautology and
+must be reported as one. **The informative arm is the spatial one**, which
+sees the real template: 5.84% irreducibly non-radial, four sessions
+concentrated in one corner of the family. A bulk arm that false-alarms less
+than the spatial arm is the *expected* direction and is reported as readily
+as the reverse.
+
+### 14c. Independence check — required before running
+
+Confirm that no real spatial grid has entered training, model selection or
+feature construction in any form. Known and already recorded (§6f): the
+healthy family's *form* was chosen with the real template in view, and
+`INTENSIDAD` drove generation. So the claim available is **quietness on
+unseen spatial realisations of operating conditions the model has seen** —
+not on unseen operating conditions, and not structural independence of form.
+That narrowing is stated *at the result*, not in a footnote.
+
+### 14d. Criterion
+
+False-alarm rate (FAR) = fraction of evaluated timesteps (or windows) whose
+predicted class is anything other than healthy / `none`.
+
+| FAR, per model, per input arm, per configuration | verdict |
+|---|---|
+| ≤ 5% | **PASS** — quiet |
+| > 5% and ≤ 50% | **FAIL** — not quiet; reported with which class it alarms |
+| > 50% | **FAIL, simulator-learned** — the model's healthy region does not contain the real cell |
+
+5%, because it is the conventional tolerance for a false-positive rate and
+because Model A's own held-out synthetic false-positive rate on healthy was
+1.6% (spatial) and 0.2% (bulk): a real-data rate several times the synthetic
+one is the signature of a model that learned the simulator. An arm passes
+Phase 5 only if it passes on **all four** real configurations. Also reported,
+not criteria: FAR against the model's own cross-validated synthetic FPR; FAR
+split by conditioning-hold versus dynamic segments; which fault class the
+alarms name; and a sustained-alarm rate (≥ 3 consecutive alarmed samples).
+
+**A failure is a result.** If the spatial arm fails, the phase's completed
+record says so: a model trained on this generator does not stay quiet on the
+real cell, which bounds what every Model A and Model B number can mean.
