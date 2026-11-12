@@ -3156,3 +3156,313 @@ alarms name; and a sustained-alarm rate (≥ 3 consecutive alarmed samples).
 **A failure is a result.** If the spatial arm fails, the phase's completed
 record says so: a model trained on this generator does not stay quiet on the
 real cell, which bounds what every Model A and Model B number can mean.
+
+## 15. Model B — result
+
+From `scripts/spatial/phase4_model_b.py`, run log `run_logs/model_b.log`
+(terminal line `EXIT=0`), reported in the order §13h fixed. Every number is a
+statement about this generator (§13a) and none is real-fault prediction
+accuracy (§11a).
+
+### 15a. Convergence
+
+**All 192 fits converged.** Maximum iterations used: spatial 1,162, bulk 119,
+against a cap of 20,000. The fit log is stored inside each result file, so
+this covers every fit behind every number below.
+
+### 15b. Which pre-registered criterion fires
+
+**Criterion 3 — SPATIAL DOES NOT HELP — fires for every fault, in both
+starvation arms, under both splits.** In no configuration is the spatial arm's
+F1 above the bulk arm's. Criterion 5 (spatial helps) fires nowhere.
+
+**The horizon is achieved in both arms for all three faults** (Youden's J CI
+lower bound above zero everywhere, lowest +0.711). Criterion 2 fires nowhere.
+
+Criterion 1 (uninformative) fires once, as written: flooding, no_axis
+starvation arm, trace split, where bulk F1 = 0.951 exceeds the 0.95 ceiling.
+The same configuration under the other three arm/split combinations sits at
+0.945–0.949, just under it. Flooding is therefore at the edge of having no
+headroom at all, and its result is read that way.
+
+Criterion 4 (artifact alarm, blind stratum of the 30 s controls) fires in six
+of eight control cells — see §15e.
+
+### 15c. Per-fault results at their own horizons
+
+Split = (trace, cell) GroupKFold unless stated; the trace split agrees
+throughout and is in the log. Delta = spatial − bulk, CI over (trace, cell)
+groups.
+
+**Starvation, h = 1 s, L = 3 s** — 534 positives from 211 events.
+
+| starvation arm | input | precision | recall | F1 | J | delta-F1 [95% CI] |
+|---|---|---|---|---|---|---|
+| directional | spatial | 0.837 | 0.820 | 0.829 | 0.814 | **−0.072 [−0.163, +0.002]** |
+| directional | bulk | 0.922 | 0.880 | **0.900** | 0.877 | |
+| no_axis | spatial | 0.859 | 0.835 | 0.847 | 0.830 | **−0.054 [−0.112, −0.006]** |
+| no_axis | bulk | 0.946 | 0.860 | **0.901** | 0.858 | |
+
+**Flooding, h = 2 s, L = 5 s** — 1,273 positives from 98 events.
+
+| starvation arm | input | precision | recall | F1 | J | delta-F1 [95% CI] |
+|---|---|---|---|---|---|---|
+| directional | spatial | 0.867 | 0.873 | 0.870 | 0.860 | **−0.077 [−0.120, −0.040]** |
+| directional | bulk | 0.924 | 0.972 | **0.947** | 0.964 | |
+| no_axis | spatial | 0.868 | 0.876 | 0.872 | 0.863 | **−0.077 [−0.116, −0.039]** |
+| no_axis | bulk | 0.926 | 0.973 | **0.949** | 0.966 | |
+
+**Drying, h = 20 s, L = 48 s** — 647 positives from **13 events**; 989
+non-drying targets of which 48 are healthy. **INDICATIVE, NOT ESTABLISHED**
+(§13l correction 1).
+
+| starvation arm | input | precision | recall | F1 | J | delta-F1 [95% CI] |
+|---|---|---|---|---|---|---|
+| directional | spatial | 0.912 | 0.898 | 0.905 | 0.841 | **−0.031 [−0.072, −0.002]** |
+| directional | bulk | 0.954 | 0.920 | **0.936** | 0.890 | |
+| no_axis | spatial | 0.932 | 0.887 | 0.909 | 0.845 | **−0.023 [−0.053, +0.005]** |
+| no_axis | bulk | 0.953 | 0.912 | **0.932** | 0.883 | |
+
+**The bulk arm out-predicts the spatial arm for every fault.** For flooding
+the interval lies wholly below zero under both splits and both arms: the bulk
+arm is not merely unbeaten, it is better. §13i said a bulk arm that
+out-predicts the spatial arm is reported as readily as the reverse; this is
+that report.
+
+A further count correction on drying: §13l recorded 18 contributing events
+from a label-only pass; the model run finds **13** events whose positives
+survive into the kept windows. The lower number is the operative one and
+strengthens the *indicative* status.
+
+### 15d. Both starvation arms, and the binary comparison
+
+**§11e branch 3.** Criterion 5 holds in neither starvation arm, so
+**starvation's predictive spatial advantage is not demonstrated by this
+work.** The two arms are indistinguishable here (bulk F1 0.900 vs 0.901;
+spatial 0.829 vs 0.847), so the 0.711-vs-0.567 baseline separability gap
+between them did not carry into prediction.
+
+**Binary healthy-vs-starvation**: both arms at F1 0.996–1.000 under both
+splits, delta within ±0.003. "Is starvation coming, or nothing?" is answered
+perfectly by two bulk features. So the 4-class starvation errors are all
+*between fault types* — the confusion matrix shows it (directional arm,
+spatial: 63 starvation→flooding, 69 flooding→starvation; bulk: 54 and 40) —
+and the spatial arm confuses them slightly *more*, not less. §11i's confound
+does not rescue a spatial advantage; there is none to rescue.
+
+### 15e. The controls, and the alarm
+
+At h = 30 s both arms still score above chance (starvation control J
+0.15–0.31; flooding control J 0.58–0.76), and the bulk arm again leads.
+**Skill at 30 s for faults whose whole onset is under 9 s is load-trace
+reading** — exactly what the precursor measurement predicted — and the bulk
+arm, which sees load directly through two features, does it better than a
+model that must find those two features among 652.
+
+**Criterion 4 fires as written in six of eight control cells**, and the sign
+matters:
+
+- **Flooding control, all four cells: bulk recall on blind positives exceeds
+  spatial** (0.92–0.97 vs 0.71–0.79; dBlind CI −0.32 to −0.10). The spatial
+  arm is *worse* on windows whose grids are healthy grids. That is not a leak
+  in the spatial arm's favour. It is the cost of 648 uninformative features
+  under the same regularisation — the over-parameterisation §13f and §13l
+  flagged in advance as biting the spatial arm only.
+- **Starvation control, trace split only: spatial recall on blind positives
+  exceeds bulk** (0.33 vs 0.11; dBlind CI +0.14 to +0.30). Under the cell
+  split the interval includes zero. This is the direction an artifact would
+  take, and it appears only in the split where **cells are not held out**: the
+  five drawn cells recur in every trace, so under leave-one-trace-out the
+  spatial arm can recognise *which cell* it is looking at and the bulk arm
+  cannot. The spatial arm also runs at twice the false-positive rate there
+  (0.155 vs 0.070), so part of the gap is operating point rather than
+  information. **Candidate leak identified, not proven: cell identity shared
+  across traces in the trace split.**
+
+Per §13i the affected delta is not reportable as spatial advantage — and none
+is being claimed, since the delta is negative. But the alarm reaches backward:
+**Model A's trace split shares the same construction.** Its trace-split delta
+was the slightly more favourable one (+0.130 vs +0.123, §12). That 0.007
+difference is now of uncertain origin, and Model A's (trace, cell) split is
+the one to quote. Recorded here; §12's numbers are not edited.
+
+### 15f. What the result means, and what it does not
+
+**The per-fault horizon finding is confirmed by a trained predictor, in both
+arms:** 1 s for starvation, 2 s for flooding, 20 s for drying (the last
+indicative). That was only a separability claim before; it is now measured.
+
+**Spatial resolution adds nothing to prediction on this generator, and costs
+something.** The spatial arm is a superset of the bulk arm, so it cannot be
+worse on information; it is worse on estimation. Two bulk features — mean(J)
+and load — with their slopes already carry the precursor, because **in this
+generator a developing fault is a shortfall in delivered current**, which
+mean(J) reads directly, and because faults are triggered by load events,
+which load reads directly.
+
+**§10, applied to the result rather than to a design choice.** The bulk
+arm's strength is itself partly a construction of the generator. A real cell
+under galvanostatic load delivers its demanded current; its mean(J) is pinned
+(Phase 5's transform shows it: 0.7007 ± 0.005) and a fault appears in voltage
+and in redistribution, not as lost mean current. So "bulk predicts as well as
+spatial" is a statement about a generator whose magnitude channel carries the
+fault. It does not show that bulk signals would suffice on a real cell — and
+§16 shows how little any of these models transfers.
+
+**A wish recorded and declined (§13k).** After seeing this, the obvious move
+is to tune regularisation per arm, or select features for the spatial arm,
+and re-run. That would be choosing the analysis after the result. `C = 1.0`
+in both arms was registered with its asymmetry stated; it stands. What can be
+said honestly is the limit of the null: **this shows a level-and-trend linear
+model gains nothing from the grid, not that no model could.**
+
+---
+
+## 16. Phase 5 — result
+
+From `scripts/spatial/phase5_false_alarm.py`, run log `run_logs/phase5.log`
+(terminal line `EXIT=0`), with `phase5_diagnostics.py` run afterwards.
+
+### 16a. Before any number
+
+**Convergence: all 16 final models converged.**
+
+**Independence (§14c), checked rather than asserted:** every final model was
+trained before the real-data loader was imported; the script asserts
+`cdm_parser` is absent from `sys.modules` at that point, and the assertion
+passed. No real spatial grid entered training.
+
+**The claim available is narrow and is stated here, at the result:** because
+`INTENSIDAD` drove generation and the healthy family's form was chosen with
+the real template in view (§6f), a pass would mean *quietness on unseen
+spatial realisations of operating conditions the models have seen* — not on
+unseen operating conditions, and not structural independence.
+
+### 16b. The verdict, as registered
+
+FAR on all post-warm-up timesteps, per real configuration (Normal /
+Inverse / Inverse_Air / Inverse_H₂). Pass requires ≤ 5% on all four.
+
+| model | starvation arm | input | FAR per configuration | verdict |
+|---|---|---|---|---|
+| A snapshot | directional | spatial | 0.986 0.976 0.987 0.961 | **FAIL, simulator-learned** |
+| A snapshot | directional | bulk | 0.893 0.847 0.880 0.888 | **FAIL, simulator-learned** |
+| A snapshot | no_axis | spatial | 0.069 0.976 0.091 0.959 | **FAIL** |
+| A snapshot | no_axis | bulk | 0.893 0.876 0.882 0.889 | **FAIL, simulator-learned** |
+| B starvation | directional | spatial | 0.015 0.014 0.014 0.024 | **PASS** |
+| B starvation | directional | bulk | 0.053 0.017 0.053 0.063 | **FAIL** |
+| B starvation | no_axis | spatial | 0.010 0.015 0.014 0.027 | **PASS** |
+| B starvation | no_axis | bulk | 0.055 0.016 0.057 0.066 | **FAIL** |
+| B flooding | directional | spatial | 0.180 0.060 0.087 0.079 | **FAIL** |
+| B flooding | directional | bulk | 0.063 0.062 0.070 0.078 | **FAIL** |
+| B flooding | no_axis | spatial | 0.061 0.041 0.075 0.061 | **FAIL** |
+| B flooding | no_axis | bulk | 0.061 0.063 0.070 0.078 | **FAIL** |
+| B drying | directional | spatial | 0.987 0.942 0.994 0.967 | **FAIL, simulator-learned** |
+| B drying | directional | bulk | 0.934 0.927 0.928 0.923 | **FAIL, simulator-learned** |
+| B drying | no_axis | spatial | 0.956 0.928 0.954 0.941 | **FAIL, simulator-learned** |
+| B drying | no_axis | bulk | 0.936 0.929 0.928 0.923 | **FAIL, simulator-learned** |
+
+**Fourteen of sixteen fail. Model A fails in every arm; seven of its eight
+arm-configuration families exceed 50% and are simulator-learned.** The only
+passes are Model B's starvation configuration, spatial input, in both
+starvation arms.
+
+**The models trained on this generator do not stay quiet on the real healthy
+cell. They learned the simulator.** That is the registered failure, and per
+§14d it bounds what every Model A and Model B number can mean.
+
+### 16c. A prediction in the pre-registration itself was wrong
+
+§14b stated, before the run, that the bulk arm would be *"quiet nearly by
+construction"* because the transform pins its mean(J) feature. **It alarms on
+85–89% of real timesteps.** The premise held — transformed real mean(J) is
+0.7007 ± 0.0053 against a synthetic healthy 0.697 — and the conclusion was
+still wrong, because the bulk arm has a second feature and I reasoned as
+though it had one. Recorded with the result it mis-predicted; §14b is not
+edited.
+
+### 16d. What the models actually learned (diagnostics, verdicts unchanged)
+
+**The prediction path is sound.** The same stored models through the same
+`_predict` alarm on 0.1–0.6% of *synthetic* healthy rows. The failure is not
+a pipeline bug.
+
+**The bulk arm learned the generator's trigger rule.** At a healthy mean(J),
+sweeping load alone flips its prediction: `flooding` at load 0, `healthy`
+from 0.1 to 0.4, **`drying` from about 0.5–0.7 upward.** That is
+`find_dwell_events` read back out of a classifier — low-load dwell triggers
+flooding, high-load dwell triggers drying.
+
+**And the training data left it no alternative.** Synthetic training rows by
+load level:
+
+| load_ratio | healthy | drying | flooding | starvation | healthy share |
+|---|---|---|---|---|---|
+| [0.0, 0.1) | 223 | 91 | 22,820 | 1,856 | 0.9% |
+| [0.1, 0.2) | 3,274 | 820 | 1,514 | 3,467 | 36.1% |
+| [0.2, 0.4) | 10,236 | 5,506 | 0 | 2,638 | 55.7% |
+| [0.4, 0.6) | 35 | 8,289 | 0 | 751 | **0.4%** |
+| [0.6, 0.8) | 10 | 2,017 | 0 | 148 | **0.5%** |
+| [0.8, 1.0] | 10 | 22,186 | 0 | 69 | **0.0%** |
+
+**A healthy cell at sustained high load does not exist in the training
+distribution — 55 rows of 33,515 above load 0.4.** The generator makes a
+fault a near-deterministic consequence of the load regime. The real cell
+spends 78.5% of its recording in conditioning holds at sustained constant
+load, healthy throughout; every model alarms on essentially 100% of hold
+timesteps where its training associates that load with a fault.
+
+This is §12b's Risk 3 — *"`load_ratio` alone reveals the class, because
+episodes are triggered by load events"*, measured at 0.872 accuracy before
+Model A was built — arriving at the one test that could expose its cost. It
+was treated then as a threat to the *delta*. It was a threat to the
+*models*.
+
+**The spatial arm has a second failure of its own.** Model A's spatial input
+names `flooding` on the real cell (directional arm, 93–99% of timesteps),
+and in the no_axis arm splits by recording session: 7–9% FAR on Normal and
+Inverse_Air, 96–98% on Inverse and Inverse_H₂ — the same two session
+clusters `real_data_notes.md` identified by static spread (CV 0.38 vs 0.325).
+Flooding in this generator *flattens the bathtub*; the flatter real sessions
+are read as flooded. The healthy region the spatial model learned does not
+contain the real cell, and where it appears to, that depends on which
+starvation arm happened to be in the training set — a decision boundary that
+moves with something unrelated to health.
+
+### 16e. The pass, and why it should not be over-read
+
+Model B's starvation configuration with spatial input passes in both arms
+(1.0–2.7%). Two things qualify it:
+
+- **It passes on dilution.** Its FAR is exactly 0.000 on hold timesteps and
+  **3.4–12.7% on dynamic segments** — above 5% on dynamic segments in three
+  of four configurations for the directional arm. The registered criterion
+  counts all post-warm-up timesteps and the verdict stands as PASS; but the
+  holds are operating conditions the model never saw and happens to be silent
+  on, and they are 78% of the denominator.
+- **It is the model with the least to say.** A 3 s window and a 1 s horizon,
+  on a class whose synthetic positives are tied to steep load ramps. On a
+  recording dominated by constant load it has little occasion to fire.
+
+The same model with bulk input fails narrowly (5.3–6.6% in three
+configurations), so here — the one place it does — **the spatial arm is
+quieter than the bulk arm.** Reported because §14 required whichever arm
+false-alarms less to be reported as readily as the reverse; the reverse holds
+for Model A, where no_axis spatial is quieter than bulk on two sessions and
+louder on the other two.
+
+### 16f. What Phase 5 establishes
+
+- **Negative, and decisive:** classifiers trained on this generator are not
+  deployable on the real cell even as healthy/not-healthy detectors. The
+  synthetic-to-real gap is not a calibration offset; the models encode the
+  generator's load-to-fault rule and its template family's boundaries.
+- **It retroactively bounds Model A and Model B.** Their accuracies are
+  accuracies at separating this generator's classes, a task in which the load
+  regime is close to the label. The spatial-vs-bulk *delta* is a comparison
+  between two arms that share that defect, so it is not thereby void — but no
+  absolute number from either model says anything about a real cell, healthy
+  or faulted. §11a said this of fault patterns; Phase 5 extends it, by
+  measurement, to the models.
+- **What it does not establish:** anything about detection. There are no
+  faults in the real data.
