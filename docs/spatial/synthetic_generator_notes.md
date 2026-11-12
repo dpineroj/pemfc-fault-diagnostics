@@ -3890,3 +3890,28 @@ at most 33. Both counts are reported beside every drying number.
 | 3 Phase 5 | whether the diagnosed defect is shown removable; what a v2 predictor scores on synthetic data | §16b's verdicts; the status of the real recording as burned |
 | 4 tuning | whether §15f's stated limit is narrowed | the §15 null |
 | 5 drying | whether drying moves from indicative to established (post-hoc) | §15c's drying row |
+
+### 17j. Amendment, 12 November 2026 — approval and four decisions, before the first fit
+
+§17 was approved as written. Four decisions are recorded here before any
+model in §17 is fitted; none changes a criterion.
+
+1. **Workstream 4's outer split is the crossed split S3.** It replaces the
+   (trace, cell) split named in the original request. The leaky split is
+   **not** run for comparison. (Already the plan in §17f; now confirmed.)
+2. **Drying keeps the registered unit** — distinct contributing trigger
+   events, per §13b. If 40 cells per trace does not reach 30, the comparison
+   runs once and is reported as underpowered. (§17g, confirmed.)
+3. **Companion runs, not trigger thinning.** (§17e 3b, confirmed.)
+4. **Each fault-free companion inherits its faulted twin's (trace, cell)
+   group ID**, so it lands on the same side of every split as its twin.
+   **New requirement:** this is verified by a label-only check — for S0, S1,
+   S2 and S3, every fold must place each companion in the same partition as
+   its twin, and no fold may have a twin in training and its companion in
+   test or the reverse — and that check must pass, with its log ending
+   `EXIT=0`, before any v2 model is fitted.
+
+§17 runs on the existing generator exactly as registered. A new generator
+version is being built separately for the detector tool
+(`docs/tool_design.md`); it plays no part in §17 and §17's results are not
+re-derived on it.
