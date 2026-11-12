@@ -3559,3 +3559,334 @@ louder on the other two.
   measurement, to the models.
 - **What it does not establish:** anything about detection. There are no
   faults in the real data.
+
+---
+
+
+## 17. POST-HOC follow-up — plan, fixed before any fit
+
+**Everything in §17 onward is post-hoc.** It was conceived after the Model A,
+Model B and Phase 5 results were seen, in response to problems those results
+exposed. It carries less evidential weight than §12–§16 for that reason, and
+every table, heading, commit and README line derived from it says POST-HOC.
+
+Written and committed before any model in it is fitted. Repository state at
+writing: `442e57c`. Nothing below has been run except one label-only check
+(§17b: no grids, no fits).
+
+### 17a. What does not change, whatever comes out
+
+- **Nothing already reported is edited, re-run in place or overwritten.** The
+  falsified §14b expectation, every §15 and §16 table, and §12 stay as
+  written. Where a result here bears on one of them, the new result is
+  reported *alongside* and the old one keeps its place.
+- **The capped Model A run stays the quoted Model A result** and "+0.07 to
+  +0.12 depending on estimator" stays as written.
+- **The §15 null stays the pre-registered Model B result.** Nothing
+  exploratory overrides it.
+- **The closure reasoning** (`phase_closure_spatial.md` §2) is untouched.
+- **§11a.** No number here is real-fault accuracy.
+- **The real healthy recording is a burned test set.** Its Phase 5 failures
+  have been inspected (§16d). Any re-test on it is labelled **NOT AN
+  INDEPENDENT TEST**, is run once, and cannot validate anything.
+- **The healthy family is not touched**: not its form, its parameter ranges,
+  or its sampling. Nothing is fit to, tuned against or selected using the
+  real recording.
+- `fault_generator.py` stays byte-for-byte unchanged. SHA-256 at writing:
+  `32c57c020e3d39890efd8cdb02ca9be3b25e59e4867ba312b0b022fef14d0958`.
+  Checked again at close-out, with `test_fault_generator.py` and
+  `test_phase3b_acceptance.py` run before the first fit and after the last.
+
+### 17b. A finding that precedes the plan: the leak is wider than §15e said
+
+From `scripts/spatial/posthoc_confirm_cell_leak.py`
+(`run_logs/posthoc/cell_leak.log`, `EXIT=0`). Label-only.
+
+Both models seed a cell as `BASE_SEED + 1000 * cell_idx`, with no trace term,
+and the generator draws healthy parameters from that seed alone. Measured:
+**each `cell_idx` has one parameter set across all four traces — 5 distinct
+cells behind 20 groups.** Fold by fold:
+
+| split | test cells also present in training | test traces also present in training |
+|---|---|---|
+| "cell" — GroupKFold on (trace, cell) | **all of them, every fold** | **all of them, every fold** |
+| "trace" — LeaveOneGroupOut on trace | **all of them, every fold** | none |
+
+**So neither split ever holds out a cell.** The split §12 and §13 call
+"unseen CELL" holds out only a *combination*: the model has seen that cell
+under three other traces and that trace under four other cells.
+
+**This corrects §15e and §12j, which are not edited.** Both say the trace
+split is the leaky one and tell the reader to quote the (trace, cell) split
+instead. That advice rested on a premise I did not check — that the
+(trace, cell) split holds out cells. It does not. It also weakens §15e's
+explanation of the starvation-control alarm: if shared cell identity were the
+whole cause, the alarm should have fired under the cell split too, where
+cells are equally shared. It fired only under the trace split. Cell identity
+may still matter in combination with an unseen trace; §17c is built to
+separate the two rather than assume.
+
+### 17c. Workstream 1 — corrected splits
+
+**Design: a 2 × 2 over what is held out.** Two splits exist; two are added.
+
+| | cell seen in training | cell held out |
+|---|---|---|
+| **trace seen** | S0: GroupKFold(4) on (trace, cell) — *original* | **S2: leave-one-cell-out**, 5 folds, 16 training groups |
+| **trace held out** | S1: leave-one-trace-out, 4 folds — *original* | **S3: crossed**, 20 folds: test = group (T, c); train = every group with trace ≠ T **and** cell ≠ c (12 groups) |
+
+**The fix chosen: rebuild, do not retire. S3 becomes the corrected split.**
+Retiring the trace split in favour of (trace, cell) is not available — S0
+leaks more than S1, not less. S3 is chosen over regenerating 20 distinct
+cells because it changes only the split: same samples, same features, same
+cells as §12 and §15, so a difference between S1 and S3 is attributable to
+holding out the cell and to nothing else. Its cost is stated: each fold
+trains on 12 groups instead of 15, which lowers every score somewhat in both
+arms. S2 is there to show how much of any change is the cell and how much is
+the smaller training set and unseen trace.
+
+**Runs** (new outputs under `run_logs/posthoc/`; originals untouched):
+
+- *Model B* — all five configurations and the binary task, both starvation
+  arms, both inputs, under S2 and S3. Model, features, windows, labels,
+  `C = 1.0`, `max_iter = 20000`, bootstrap (1000 resamples over
+  (trace, cell) groups) all imported from `phase4_model_b.py`, not retyped.
+  S0 and S1 are read from the persisted §15 files.
+- *Model A* — the **capped** configuration (`MAX_PER_GROUP = 2500`, sampling
+  seeds `777 + cell_idx`, as in the quoted run), four amplitude scales, both
+  arms, logistic regression under S0–S3; random forest at scale 1.00 under S0
+  and S3. S0 and S1 are re-fitted here only because the capped run's
+  per-sample predictions were not kept. **Reproduction gate:** if re-fitted
+  S0/S1 macro-F1 differs from §12's recorded value by more than 0.005 in
+  either arm, the run stops there and I ask before going on — a
+  re-implementation that cannot reproduce the original cannot correct it.
+
+**Criteria, fixed now.**
+
+1. *Starvation control, artifact alarm* (§13i criterion 4 as amended by
+   §13l, unchanged): spatial − bulk recall on blind positives, CI excluding
+   zero = alarm. Reported for S0–S3, both arms.
+   - Alarm under S1 but not S3 → holding out the cell removes it; shared
+     cell identity under an unseen trace was the leak. §15e's candidate is
+     confirmed in that narrower form.
+   - Alarm still fires under S3 → **cell identity is not the explanation and
+     §15e's candidate is falsified.** The artifact is then unexplained, is
+     reported as unexplained, and the control's spatial delta stays
+     unreportable as advantage. No further split is tried.
+2. *Model B main configurations:* §13i criteria applied as written to S3.
+3. *Model A:* delta with 95% group-bootstrap CI under S3. Lower bound > 0 →
+   the snapshot advantage survives holding out cell and trace. CI includes 0
+   → it does not, and every quotation of Model A's delta carries that caveat
+   from then on (the quoted figure itself is not edited).
+
+**Expectation, stated so it can be wrong.** I expect the spatial arm to lose
+more than the bulk arm from S1 to S3 in Model A, because 324 segments can
+identify a cell and two bulk features cannot (every cell's healthy mean is
+0.697). I expect the Model A delta to shrink and stay positive. For Model B
+I expect criterion 3 to fire again. I have no confident expectation for the
+control alarm — §17b removed the reasoning I had.
+
+### 17d. Workstream 2 — the convergence-record gap (verification only)
+
+Re-fit exactly the three cells with no convergence record — directional arm,
+scales 0.00, 0.25, 0.50, uncapped, both original splits (48 fits) — with the
+configuration and seeds of §12j, writing `n_iter_` against `max_iter` for
+**every fit** to a JSON beside the predictions
+(`run_logs/posthoc/model_a_refit/`). The persisted §12j files are read, never
+written.
+
+§12i allowed one attempt and §12j declined to re-fit on that ground. This
+re-fit is made because it has now been explicitly requested as verification;
+it is not a further attempt at the result and changes no quoted number.
+
+- **Match** = all 48 fits converged, and for each cell/split/arm the re-fit
+  macro-F1 is within 0.001 of the resumed one, with per-sample agreement
+  reported. Then those cells' numbers in §12j become verified.
+- **Any fit not converged** → that cell's uncapped numbers are unreportable.
+- **Converged but not matching** → reported as a reproducibility failure of
+  the resumed cells; neither version is quoted.
+- In every case the capped run stays the quoted result.
+
+### 17e. Workstream 3 — Phase 5 false alarms
+
+**3a. Re-analysis, no refitting.** For the 16 stored models, false-alarm rate
+on conditioning holds and on dynamic segments separately, per real
+configuration, recomputed from the stored coefficients through the Phase 5
+prediction path (`run_logs/posthoc/phase5_split/`). Descriptive: §16b's
+verdicts stand. The 5% line is shown against the dynamic-only rate for
+reference and is **not** a re-adjudication — the registered criterion counted
+all post-warm-up timesteps.
+
+**3b. One generator change: a healthy companion run.** For every
+(trace, cell), a second run is added over **the same load trace** with **the
+same cell parameters** and **no fault episode**: severity 0 throughout, same
+segment ids and seam flags, independent grid noise (seed = the model's
+existing noise-seed formula + 32452843). It belongs to the same (trace, cell)
+group, so no split separates a cell from its companion. Ratio 1 : 1. Call the
+original data v1 and v1 + companions v2.
+
+- *Why this change.* §16d's diagnosis is that the generator makes a fault a
+  near-certain consequence of the load regime, so healthy operation above
+  40% load is 55 of 33,515 rows. The companion makes healthy operation cover
+  exactly the load distribution of the real dynamic segments, at every load
+  level the trace visits.
+- *Why it is physically grounded and not fit to the real cell.* It asserts
+  only that a healthy cell can run the FC-DLC cycle without faulting — which
+  is what a healthy cell is. It uses the load trace, already the generator's
+  input. It uses no real grid and no real bulk signal, and no parameter of it
+  was chosen by looking at the real recording: the ratio is 1 : 1 because that
+  is the uninformative choice, and it is not revisited.
+- *Why a companion rather than thinning the triggers.* Thinning redraws every
+  fault episode. The companion leaves every v1 faulted run **bit-identical**
+  (asserted against the v1 cache), so v1 and v2 share every positive window
+  and the cost of the fix can be measured as a paired difference (3d).
+- *What it does not fix, by design.* The spatial arm's healthy region did not
+  contain two of the real sessions (§16d). Fixing that would mean moving the
+  healthy family toward the real cell, which rule 17a forbids.
+- **One change, tested once. No second variant, whatever the result.**
+
+**3c. Re-test on the real recording — NOT AN INDEPENDENT TEST.** The 16 final
+models are retrained on all v2 synthetic data (same estimators and settings
+as `phase5_false_alarm.py`; the `cdm_parser` independence assertion kept) and
+run through the identical transform and the identical registered criterion:
+≤ 5% on all four configurations to pass, > 50% = simulator-learned. Hold and
+dynamic rates reported separately as in 3a.
+
+What each outcome would mean:
+
+- *A model passes.* The specific defect diagnosed in §16d is removed for that
+  model. **It is not validated**: the change was designed after seeing this
+  recording fail, on this recording.
+- *A model still fails.* Generator-trained models remain unusable on the real
+  cell even after the diagnosed defect is addressed; §16f is strengthened.
+- Either way §16b's table is the Phase 5 result.
+
+Expectations, stated so they can be wrong — noting that my last expectation
+about the bulk arm (§14b) was falsified:
+
+- **Bulk Model A falls below 50% in all four configurations, both arms.** I
+  do **not** predict it passes 5%. The synthetic healthy mean(J) is far
+  tighter than the real one (s.d. 0.0053), so real excursions below 0.697 at
+  high load may still read as early drying.
+- **Spatial Model A still fails on Inverse and Inverse_H₂** (the flatter
+  sessions), because nothing here addresses that.
+- **Model B drying falls below 50% with bulk input**; spatial uncertain.
+
+**3d. Does the fix cost prediction? (synthetic)** Model B on v2, three main
+configurations and the binary task, both starvation arms, both inputs, under
+S3; Model A on v2 at scale 1.00 under S3. Reported: precision, recall, F1,
+FPR, J per arm; spatial − bulk delta with CI; §13i criteria as written.
+**The paired cost measure:** recall on own-fault positives, v2 minus v1 under
+S3, on the identical positive windows, 95% group-bootstrap CI, per fault and
+arm. *Costs detection* iff the CI lies wholly below zero; the size is
+reported either way. Precision is not paired (v2 has more negatives) and is
+reported unpaired.
+
+**This is the model the project's stated goal points at — predicting a fault
+before it is confirmed without alarming on a healthy cell — and it is
+post-hoc.** A good result here is a statement about v2 of a generator.
+
+### 17f. Workstream 4 — matched tuning for both arms (EXPLORATORY)
+
+Question: does "this model gains nothing from the grid" (§15f) survive as "a
+tuned model gains nothing from the grid"?
+
+- Data: **v1**, the §15 data, three main configurations, both starvation
+  arms, 4-class task. Same model class, features and class weighting.
+- Outer split: **S3**. The request named the (trace, cell) split; §17b shows
+  it holds out neither cell nor trace, so S3 is used and the substitution is
+  recorded here.
+- Inner split: leave-one-cell-out among the four training cells (4 folds),
+  so `C` is never selected on a cell the candidate has seen.
+- Grid, identical for both arms: `C ∈ {0.001, 0.01, 0.1, 1, 10}`. It
+  contains the registered value and extends further toward strong
+  regularisation than away from it, because the concern recorded in §15f is
+  that `C = 1.0` leaves 652 features under-regularised.
+- Selection: own-fault F1 pooled over inner validation folds; ties go to the
+  smaller `C`. Same budget per arm: 5 candidates × 4 inner folds + 1 refit
+  per outer fold.
+- Convergence asserted and recorded for every inner and outer fit. A
+  candidate with a non-converged inner fit is ineligible in that fold, for
+  that arm, and is listed. A non-converged outer refit makes that
+  configuration's tuned numbers unreportable.
+- Reported: selected `C` per fold and arm; tuned F1 per arm; tuned delta with
+  95% group-bootstrap CI; the untuned S3 delta from §17c beside it.
+- Reading: CI includes or lies below zero → the null survives matched tuning,
+  for this model class. Lower bound > 0 → *an exploratory indication* that
+  regularisation, not information, produced the null. **Neither outcome
+  overrides §15.** A positive would justify a properly pre-registered
+  replication on fresh draws and nothing more.
+
+### 17g. Workstream 5 — drying statistical power
+
+**Target, fixed before any drying result here: at least 30 distinct drying
+trigger events contributing positive windows at the drying configuration,
+with at least 5 from each trace.** Justification: §13b's purpose was a
+recall-type proportion with worst-case half-width ≤ 0.18, which needs
+n ≥ 30; §13l found the minimum had been applied to trigger events (33)
+rather than contributing events (18 by labels, 13 in the fitted data). This
+applies the same number to the count the estimate is actually taken over.
+
+**The ceiling, stated first.** Triggers are deterministic in the load trace
+(§13l) and the four traces contain 33 drying trigger events in total. No
+amount of generation produces a 34th. The target asks that 30 of those 33
+contribute.
+
+**Method.** An event fails to contribute when a confirmed fault — typically
+the starvation episode triggered by the ramp into the high-load dwell — sits
+in its 48 s window. Whether that episode crosses the threshold depends on the
+cell's seed. So: **40 cells per trace instead of 5** (`cell_idx` 0–39, same
+seed rule, the first five identical to §15's; v1 generator, unchanged).
+40 is fixed now on this arithmetic: 13 of 33 contributing with 5 cells
+implies roughly a 0.10 per-cell chance, and 1 − 0.90⁴⁰ ≈ 0.98. That assumes
+events are alike, which they need not be.
+
+- A **label-only volume measurement** runs first and reports contributing
+  events per trace, (cell, event) instances, and the count of healthy
+  targets (48 in §15).
+- **Target met** → drying is reported as established *for this generator, in
+  a post-hoc analysis*.
+- **Target not met at 40 cells** → the count is not raised and the target is
+  not lowered. The comparison is still run once, as registered here, and
+  reported as **underpowered**; the shortfall is then a structural limit of
+  four load traces.
+
+**Comparison.** §15's protocol: h = 20 s, L = 48 s, same features, model and
+criteria (§13i), both starvation arms. Splits: S3 primary, with cells folded
+into five blocks (`cell_idx mod 5`) so the 20-fold structure is kept; S0 and
+S1 also run and labelled as leaking cell identity, for continuity with §15c.
+Group bootstrap over the 160 (trace, cell) groups.
+
+A limit recorded now: more cells multiply (cell, event) instances far faster
+than distinct events. The CI comes from resampling groups, so it will tighten
+with 160 groups even though the number of distinct load events behind it is
+at most 33. Both counts are reported beside every drying number.
+
+### 17h. Execution rules
+
+- **Order:** WS2 → WS1 → WS3a → WS5 volume → WS3b–d → WS5 comparison → WS4.
+- **One attempt per run.** A crash is logged and I ask before retrying.
+  Runs write results incrementally to `run_logs/posthoc/`; a completed cell
+  on disk is not re-fitted.
+- **Every run's log ends `EXIT=<code>`**, written from the interpreter's own
+  exit status, and that line — not the task notification — is what is read.
+- **Every fit writes a convergence record** (`n_iter_`, `max_iter`,
+  converged) into the result file it belongs to, so a resumed run cannot
+  report fits it did not make. A cell with a non-converged fit is
+  unreportable.
+- Runs use `-u -W ignore`; no check depends on a warning.
+- Seeds: generator `BASE_SEED = 20260810` and all existing seed formulas
+  unchanged; companion noise offset `32452843`; post-hoc bootstrap generator
+  seeded `20261201`; cap sampling `777 + cell_idx`.
+- Convergence status is reported before any number; faults are never
+  aggregated across horizons; both starvation arms are always reported.
+
+### 17i. What each workstream can change
+
+| workstream | can change | cannot change |
+|---|---|---|
+| 1 splits | which split is quoted from now on; a standing caveat on Model A's delta; whether §15e's leak explanation stands | §12 and §15 tables; the quoted Model A range |
+| 2 convergence | whether three §12j cells count as verified | the capped run as quoted result |
+| 3 Phase 5 | whether the diagnosed defect is shown removable; what a v2 predictor scores on synthetic data | §16b's verdicts; the status of the real recording as burned |
+| 4 tuning | whether §15f's stated limit is narrowed | the §15 null |
+| 5 drying | whether drying moves from indicative to established (post-hoc) | §15c's drying row |
