@@ -78,3 +78,49 @@ dynamic loading; none was downloaded or audited.
 "No indication of dynamic loading" is a statement about what the search
 snippets showed, **not** a structural finding. If either Mendeley deposit is
 ever considered, it gets a Zhou-style audit first.
+
+---
+
+## 3. What the tool changes about what to ask for (added November 2026)
+
+**Still a draft. Nothing has been sent.** This section updates *what* a
+request should ask for, now that the `hfc` detector exists
+(`docs/tool_design.md`); it does not change the status of §1.
+
+The detector's data contract is narrower and more specific than the original
+request assumed, and the Seville demo showed two things that matter for any
+dataset worth asking for (`hfc_models/MODEL_CARD.md`):
+
+1. **Bulk signals are enough to test the default variant.** Stack current and
+   cell voltage at ≥ 1 Hz. The §1 dataset is bulk-only, which was recorded
+   above as a limitation; for the shipped default it is exactly what is
+   needed.
+2. **A healthy stretch from the same session is required.** The tool
+   calibrates on the cell it is judging, and a baseline does not transfer
+   between sessions (cross-session false alarms of 69–73% on the real
+   recording). A fault recording without same-session healthy data cannot be
+   scored by this tool at all.
+
+So a request should ask, in this order of importance:
+
+| ask | why |
+|---|---|
+| per-sample **stack current and cell (or per-cell mean) voltage**, with timestamps, at ≥ 1 Hz | the bulk contract; fault-ahead horizons are 1 s, 2 s and 20 s |
+| a **healthy stretch in the same session** before each fault, spanning the load range used | runtime calibration |
+| **fault onset time** for each episode, and how it was induced | the fault-ahead models predict a confirmation time; a label with no onset can only score classification |
+| fault type, including **oxygen versus hydrogen starvation** if distinguished | the tool ships one starvation class because nothing here could ground the split |
+| whether load was **dynamic or static** during each fault | the central gap in every dataset audited so far |
+| active area, number of cells, and units for every channel | the unit checks refuse to run on implausible units |
+| a segmented current-density map, if one exists | only needed to judge the opt-in spatial variant |
+
+Sentences to add to the §1 draft before it is ever sent, replacing its
+general description of intended use:
+
+> Specifically, I would use per-sample stack current and cell voltage with
+> timestamps, the onset time and type of each induced fault, and a stretch of
+> healthy operation recorded in the same session before each fault. I have a
+> detector trained only on simulated faults and no way to measure whether it
+> works on real ones; your data would be the first real test it has had. I
+> would report the result whichever way it comes out.
+
+**Status: drafted, not sent.**
