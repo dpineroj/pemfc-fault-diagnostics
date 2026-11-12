@@ -1,0 +1,6 @@
+{
+  "_comment": "The tool's own format (SYNTHETIC data from `python -m hfc generate`). 'runs' is a list of run ids or \"all\".",
+  "adapter": "canonical",
+  "path": "hfc_data/smoke",
+  "runs": ["c00008_fault"]
+}

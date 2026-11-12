@@ -1,0 +1,12 @@
+{
+  "_comment": "A delimited bulk file: one row per sample. Edit column names and units to match your data.",
+  "adapter": "table",
+  "path": "my_recording.csv",
+  "sep": ",",
+  "decimal": ".",
+  "time": {"column": "time_s", "unit": "s"},
+  "current": {"column": "stack_current_A", "unit": "A"},
+  "voltage": {"column": "cell_voltage_V", "unit": "V"},
+  "active_area_cm2": 50.0,
+  "n_cells": 1
+}

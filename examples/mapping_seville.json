@@ -1,0 +1,10 @@
+{
+  "_comment": "The Seville recording (third-party, CC-BY-NC, not redistributed). Healthy only. Any result on it is NOT AN INDEPENDENT TEST.",
+  "adapter": "seville",
+  "config": "Normal_Flow",
+  "run_type": "FC-DLC",
+  "warmup_seconds": 300,
+  "voltage_channel": "V001",
+  "current_sign": -1,
+  "active_area_cm2": 50.0
+}
