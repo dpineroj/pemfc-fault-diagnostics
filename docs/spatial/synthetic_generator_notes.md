@@ -2675,6 +2675,98 @@ November 2026).
 - Convergence is asserted per fit as before; the capped numbers stay
   transcribed (§12h) and the capped configuration is **not** re-run.
 
+### 12j. The final uncapped attempt — result
+
+From `scripts/spatial/phase4_model_a.py` with `MAX_PER_GROUP=None`, run log
+`run_logs/model_a_attempt3.log`. **The run completed: the log's own terminal
+line is `EXIT=0`**, and all eight `(arm, scale)` result files exist in
+`run_logs/model_a_results/`. This was the single attempt §12i allowed. It
+resumed three cells persisted by the earlier attempts and fitted the other
+five.
+
+**Convergence, first — and what the run's own summary does not cover.** The
+log ends "All logistic-regression fits converged before max_iter." **That
+line is true of 80 of the 128 fits and silent on the other 48.** The
+non-convergence list lives in process memory, and the three resumed cells
+(directional arm, scales 0.00, 0.25, 0.50) were fitted by earlier processes
+that died before printing anything. Their predictions were persisted; their
+convergence status was not. This is the same defect found and fixed in
+`phase4_model_b.py` before its launch (the fit log is stored in each result
+file there); it was not back-ported here, and should have been.
+
+So, stated exactly:
+
+| cells | fits | convergence |
+|---|---|---|
+| directional, scale 1.00; no_axis, all four scales | 80 | **asserted, all converged** |
+| directional, scales 0.00 / 0.25 / 0.50 | 48 | **not recorded** |
+
+The three unrecorded cells are **not re-fitted**: §12i allowed one attempt,
+and re-running cells to repair the record is a further attempt under another
+name. What can be said of them is an inference, labelled as one — identical
+estimator, cap and data size to the 80 fits that converged, and their scores
+sit on the same line as the verified scale-1.00 cell (0.943 → 0.946 → 0.948
+→ **0.950**). That is corroboration, not an assertion. **Only the verified
+cells are quoted as the uncapped result.**
+
+**Capped and uncapped, side by side.** Macro-F1 delta, spatial − bulk,
+logistic regression, range across the four amplitude scales:
+
+| | capped (50,000; traces equalised) | uncapped (85,960; Inverse_Flow 41.2%) |
+|---|---|---|
+| directional, split = cell | +0.103 to +0.123 across arms | +0.119 at scale 1.00 *(+0.113 to +0.117 at the unrecorded scales)* |
+| directional, split = trace | +0.109 to +0.130 across arms | +0.130 at scale 1.00 *(+0.124 to +0.128 unrecorded)* |
+| no_axis, split = cell | *(as above)* | **+0.100 to +0.111** |
+| no_axis, split = trace | *(as above)* | **+0.112 to +0.122** |
+| random forest, scale 1.00, split = cell | +0.066 to +0.082 | **+0.083** directional, **+0.080** no_axis |
+| `bulk > 0.95` (no headroom) | never | never |
+
+Every uncapped interval excludes zero (lowest lower bound +0.090). The
+capped column is transcribed from §12h, whose provenance limits still apply.
+
+**What the uncapped run answers.** The cap had equalised the four load
+traces and so could have hidden a dependence on Inverse_Flow. It did not:
+
+- With Inverse_Flow at its real 41.2% share, the delta is the same size as
+  under equal shares.
+- Leave-one-trace-out, per fold at scale 1.00: the delta is **+0.108 to
+  +0.140 whichever trace is held out**, in both arms. Inverse_Flow is the
+  *easiest* trace to hold out for both arms (spatial 0.972, bulk 0.835), not
+  an outlier driving the result.
+- The amplitude sweep moves the delta by about 0.01 from scale 0.00 to 1.00.
+  Zeroing the uniform-loss constants does not manufacture or remove it.
+
+**Per class (scale 1.00, cell split), the picture of §12 is unchanged.**
+Starvation recall: spatial 0.938 in both arms; bulk 0.709 (directional) and
+0.730 (no_axis). Flooding↔starvation confusion: spatial 0.010 / 0.016, bulk
+0.119 / 0.114. The advantage is still starvation, and still the
+flooding–starvation confusion the bulk arm cannot resolve.
+
+**The honest magnitude stands as "+0.07 to +0.12 depending on estimator."**
+On the verified uncapped cells at the generator's actual amplitude, cell
+split, it is +0.111 to +0.119 under logistic regression and +0.080 to +0.083
+under a random forest. The quoted range is not narrowed to that: the capped
+run is the one with a complete convergence record, the two agree, and
+re-drawing the range after the fact from the more favourable of two runs is
+the move this record exists to refuse.
+
+**Two caveats that arrived later and apply here.** Both are recorded where
+they were found and repeated so this section is not read without them:
+
+- §15e: the leave-one-trace-out split does not hold out cells — the same
+  five cells recur in every trace. The trace-split deltas above (the larger
+  ones) carry that caveat. **Quote the cell split.**
+- §16: neither arm's model stays quiet on the real healthy cell. These are
+  accuracies at separating this generator's classes and nothing more (§11a).
+
+**Status of the capped run.** §12i said the capped run remains the phase's
+result *if the uncapped attempt died*. It did not die, so that clause does
+not decide the matter; this does: the capped run is complete **and** fully
+convergence-asserted, the uncapped run is complete and 62% asserted. **The
+capped run remains the phase's quoted result; the uncapped run is its
+corroboration, now across both starvation arms and the full amplitude sweep
+rather than three cells of one arm.**
+
 ---
 
 ## 13. Model B — predictive model, design fixed before implementation
