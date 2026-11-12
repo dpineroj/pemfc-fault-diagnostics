@@ -10,3 +10,4 @@ data/processed/
 figures/poster/
 AGENTS.md
 run_logs/
+.model_b_cache/

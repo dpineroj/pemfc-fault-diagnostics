@@ -2978,6 +2978,109 @@ change with a neutrality check, never fewer samples, arms or features.
 It stands. The wish to change it, the result that prompted the wish, and the
 reason it stands are recorded next to the result.
 
+### 13l. Measured before any model code: volume, balance, and two corrections
+
+From `scripts/spatial/measure_generation_volume.py` (labels only; no grids, no
+fits). Recorded and committed **before `phase4_model_b.py` exists.**
+
+**Triggers are deterministic in the load trace — verified, not assumed.** For
+all four traces, the episodes generated under five different seeds have
+identical (fault, onset) sets, and those sets equal what the trigger finders
+return on the bare trace. Seeds change the drawn cell and the severity
+trajectory; they do not change which events fire or when. The unit of
+independence in §13b therefore stands as the distinct load-trace event.
+
+**Yield per trace** (trigger events; threshold-crossing episodes per cell):
+
+| trace | starvation | flooding | drying |
+|---|---|---|---|
+| normal | 34 (21–26 cross) | 24 (24) | 9 (5–9) |
+| inv_flow | 184 (125–140) | 31 (31) | 6 (5–6) |
+| inv_air | 57 (38–41) | 24 (24) | 9 (5–8) |
+| inv_h2 | 92 (60–68) | 26 (26) | 9 (4–7) |
+
+**Drying against the pre-registered minimum: MET AS WRITTEN — 33 distinct
+trigger events (minimum 30), smallest trace 6 (minimum 5).**
+
+**Correction 1 — the minimum was operationalised on the wrong count, and the
+conservative reading is the one adopted.** §13b's stated *purpose* was a
+recall-type proportion over events with a half-width no worse than 0.18. The
+events that proportion is actually taken over are those contributing positive
+windows at the drying configuration, and after the eligibility rule (no
+confirmed fault anywhere in a 48 s window) that is **18 distinct events, not
+33**. At n = 18 the worst-case half-width is 0.23.
+
+So the criterion as written is met and the purpose it was written for is
+not. Choosing between those readings after the fact is exactly the freedom
+pre-registration exists to remove, and the favourable reading is not taken:
+**drying is reported as INDICATIVE, NOT ESTABLISHED**, with both counts
+stated (33 trigger events; 18 contributing). The written minimum is not
+edited. The lesson — a pre-registered count must be the count the estimate is
+actually taken over — is recorded here rather than papered over.
+
+**Correction 2 — the negative control's premise was wrong as stated.** §13d
+says that at h = 30 s "every positive is blind by construction". Measured:
+of 2,409 starvation-control positives only 1,001 are blind; of 10,495
+flooding-control positives, 7,032. The rest are precursor-visible, because
+"visible" means *any* nonzero severity in the window, and a window can carry
+sub-threshold severity from an earlier or different episode — most plainly
+flooding's own accumulate/drain oscillation, where a drained-but-not-ended
+episode precedes its next crossing by a cycle period of 20–45 s. That residue
+is genuine spatial information about what follows; a spatial advantage on it
+would not be an artifact.
+
+~~§13i criterion 4: "…or if the 30 s negative control shows a delta whose CI
+excludes zero…"~~ **Superseded before any model result existed:** the
+artifact alarm is evaluated on the **blind stratum of the controls only** —
+the spatial-minus-bulk recall difference on blind positives must have a CI
+including zero. Those are the windows whose grids are healthy grids by
+construction, which is the property the control was meant to rest on. The
+controls' overall and visible-stratum deltas are still reported, as
+description. This amendment follows from a label-only measurement and
+predates every fit.
+
+It also matters that **the three main configurations contain no blind
+positives at all** (0 of 534, 0 of 1,273, 0 of 647): every eligible positive
+window already contains some severity. So criterion 4's blind-positive clause
+is vacuous in the main configurations, and the controls' blind strata are the
+only place the artifact check lives.
+
+**Window class balance** (kept windows by target, all 20 groups; labels are
+identical across starvation arms):
+
+| configuration | none | starvation | flooding | drying | own-fault events |
+|---|---|---|---|---|---|
+| starvation (h 1, L 3) | 13,507 | **534** | 825 | 90 | 232 |
+| flooding (h 2, L 5) | 12,333 | 892 | **1,273** | 175 | 98 |
+| drying (h 20, L 48) | **48** | 145 | 796 | **647** | 18 |
+| starvation control (h 30) | 4,609 | 2,409 | 10,870 | 2,186 | 231 |
+| flooding control (h 30) | 3,441 | 2,097 | 10,495 | 2,137 | 104 |
+
+Of 92,315 timesteps, each configuration keeps 1.6k–20k windows: 6.5–8.7k are
+dropped at seams, **52k–78k because a confirmed fault is already inside the
+window**, and 3–16k because the target is developing-but-unconfirmed. No
+window is dropped for a time gap.
+
+Three consequences, stated before any model runs:
+
+- **The inversion moves again.** Starvation, the episode majority and Model
+  A's timestep minority, is again the smallest own-fault class (534) — one or
+  two eligible windows per crossing at a 1 s horizon.
+- **The drying configuration has almost no healthy targets: 48.** This
+  generator is fault-dense — a 68 s span free of any confirmed fault that
+  also ends healthy barely exists. The drying model therefore discriminates
+  "drying ahead" from "a different fault ahead" far more than from "nothing
+  ahead". Its false-positive rate is estimated over 989 non-drying targets,
+  of which 48 are healthy; that is stated wherever the drying result is.
+- **1,636 windows against 652 spatial features** in the drying configuration
+  is close to one sample per two parameters per class. Over-parameterisation
+  bites the spatial arm only. That is the conservative direction for a claim
+  of spatial advantage, and a reason to read a drying *null* for the spatial
+  arm cautiously.
+
+Balance handling stands as registered: `class_weight='balanced'`, no
+oversampling.
+
 ---
 
 ## 14. Phase 5 — the no-false-alarm test, pre-registered
