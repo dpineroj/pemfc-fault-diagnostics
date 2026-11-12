@@ -412,14 +412,34 @@ class TestContractAndAbstain(Shared):
         with self.assertRaises(ValueError):       # mismatched calibration grid
             detect.run_recording(self.rec0, cal, self.bundle, "spatial")
 
-    def test_spatial_not_used_unless_shipped(self):
+    def test_bulk_is_default_and_spatial_is_opt_in(self):
         cal = features.calibrate(self.cal_rec)
-        b = dict(self.bundle, shipped_modes=["bulk"])
-        _o, info = detect.run_recording(self.rec0, cal, b)
-        self.assertEqual(info["mode"], "bulk")
-        b = dict(self.bundle, shipped_modes=["bulk", "spatial"])
-        _o, info = detect.run_recording(self.rec0, cal, b)
-        self.assertEqual(info["mode"], "spatial")
+        for shipped in (["bulk"], ["bulk", "spatial"]):
+            b = dict(self.bundle, shipped_modes=shipped)
+            _o, info = detect.run_recording(self.rec0, cal, b)
+            self.assertEqual(info["mode"], "bulk")
+        _o, info = detect.run_recording(
+            self.rec0, cal, dict(self.bundle, shipped_modes=["bulk"]), "spatial")
+        self.assertIn("NOT shipped", info["mode_note"])
+        _o, info = detect.run_recording(
+            self.rec0, cal, dict(self.bundle, shipped_modes=["bulk", "spatial"]),
+            "spatial")
+        self.assertEqual((info["mode"], info["mode_note"]), ("spatial", ""))
+
+    def test_shipping_rule(self):
+        d = os.path.join(self.tmp, "ship")
+        os.makedirs(d, exist_ok=True)
+        shutil.copy(os.path.join(self.models_dir, "models.json"), d)
+        ok = {"delta": 0.1, "ci": [-0.05, 0.2]}
+        bad = {"delta": -0.2, "ci": [-0.3, -0.1]}
+        tasks = ["state"] + [f"ahead/{f}" for f in models.FAULTS]
+        shipped, worse = models.apply_shipping_rule(
+            d, {"spatial_minus_bulk": {t: ok for t in tasks}})
+        self.assertEqual(shipped, ["bulk", "spatial"])
+        m = {t: ok for t in tasks}
+        m["ahead/flooding"] = bad
+        shipped, worse = models.apply_shipping_rule(d, {"spatial_minus_bulk": m})
+        self.assertEqual((shipped, worse), (["bulk"], ["ahead/flooding"]))
 
 
 class TestEndToEnd(Shared):

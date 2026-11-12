@@ -388,3 +388,31 @@ def evaluate(dataset_dir, bundle, n_jobs=4, log=print):
             "metric": name, "delta": fn(a) - fn(b),
             "ci": _ci([fn(a[pk]) - fn(b[pk]) for pk in picks])}
     return out
+
+
+def apply_shipping_rule(models_dir, metrics):
+    """
+    docs/tool_design.md Sec. 2.5, fixed before any tool model was trained:
+    bulk-only always ships and is the default. The spatial variant ships as
+    an option only if, on held-out cells and load profiles, it is not worse
+    than bulk-only (delta CI not wholly below zero) for state classification
+    and for every fault's prediction.
+    """
+    b = load_bundle(models_dir)
+    need = ["state"] + [f"ahead/{f}" for f in FAULTS]
+    d = metrics["spatial_minus_bulk"]
+    worse = [t for t in need if d[t]["ci"][1] < 0]
+    b["shipped_modes"] = ["bulk"] + ([] if worse else ["spatial"])
+    b["shipping_decision"] = {
+        "rule": "spatial ships as an option iff its held-out delta CI is not "
+                "wholly below zero for state and for every fault-ahead task",
+        "deltas": {t: d[t] for t in need}, "worse_tasks": worse,
+        "default_mode": "bulk",
+        "caveat": "The spatial-versus-bulk difference on this generator is "
+                  "ASSUMPTION-DRIVEN: it follows from the assumed size of "
+                  "the voltage signature and from per-segment noise being "
+                  "independent. It is not evidence about real cells."}
+    with open(os.path.join(models_dir, "models.json"), "w", encoding="utf-8",
+              newline=chr(10)) as fh:
+        json.dump(b, fh, sort_keys=True)
+    return b["shipped_modes"], worse

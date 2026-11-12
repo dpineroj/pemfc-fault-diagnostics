@@ -23,8 +23,11 @@ from .models import AHEAD, FAULTS, STATES, decide
 
 
 def choose_mode(rec, cal, bundle, want=None):
-    """'spatial' only if the data, the calibration and the shipped models all
-    support it; otherwise 'bulk'. Returns (mode, note)."""
+    """
+    Bulk-only is the default. The spatial variant is used only on request,
+    and only if the recording and the calibration both carry a grid.
+    Returns (mode, note).
+    """
     shipped = bundle.get("shipped_modes", ["bulk"])
     can = rec.get("grid") is not None and cal.has_spatial
     if want == "spatial":
@@ -36,12 +39,10 @@ def choose_mode(rec, cal, bundle, want=None):
                                "earn its place on held-out data); used on "
                                "explicit request")
         return "spatial", ""
-    if want == "bulk" or not can:
-        return "bulk", ("" if want == "bulk" or rec.get("grid") is None
-                        else "grid present but calibration has none")
-    if "spatial" in shipped:
-        return "spatial", ""
-    return "bulk", "grid present; spatial variant not shipped, using bulk-only"
+    if can and "spatial" in shipped:
+        return "bulk", ("bulk-only is the default; a grid is present and the "
+                        "spatial variant is available with --mode spatial")
+    return "bulk", ""
 
 
 def run_recording(rec, cal, bundle, mode=None):

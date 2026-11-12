@@ -66,6 +66,10 @@ def _evaluate(a):
     with open(a.out, "w", encoding="utf-8", newline="\n") as fh:
         json.dump(m, fh, indent=1, default=float)
     print(f"written: {a.out}   (synthetic faults; not real-fault accuracy)")
+    if a.ship:
+        shipped, worse = models.apply_shipping_rule(a.models, m)
+        print(f"shipping rule applied: shipped modes {shipped}"
+              + (f"; spatial worse on {worse}" if worse else ""))
 
 
 def _run(a):
@@ -135,6 +139,8 @@ def main(argv=None):
     v.add_argument("dataset"); v.add_argument("--models", required=True)
     v.add_argument("--out", required=True)
     v.add_argument("--jobs", type=int, default=4)
+    v.add_argument("--ship", action="store_true",
+                   help="apply the pre-fixed shipping rule to models.json")
     v.set_defaults(fn=_evaluate)
     r = sub.add_parser("run")
     r.add_argument("--mapping", required=True)
