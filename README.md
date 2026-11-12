@@ -18,17 +18,19 @@ PEMFC-FAULT-DIAGNOSTICS/
 │   ├── phase_closure_spatial.md       # READ FIRST: closes the spatial line
 │   ├── real_data_notes.md             # Seville dataset — shared by both lines
 │   ├── spatial/                       # CLOSED phase
-│   │   ├── synthetic_generator_notes.md
+│   │   ├── final_results.md           # one cold-readable account of the results
+│   │   ├── synthetic_generator_notes.md   # full design record, §1–§16
+│   │   ├── data_requests.md           # drafted, unsent dataset request
 │   │   └── external_fault_datasets.md
 │   └── rul/                           # ACTIVE line (health state + RUL)
 ├── scripts/
 │   ├── common/                        # transfers to both lines
 │   │   ├── extract_load_trace.py      # FC-DLC segmentation, hold detection
 │   │   └── bulk_timeseries.py         # comma-decimal bulk channel reading
-│   ├── spatial/                       # CLOSED phase (13 files)
+│   ├── spatial/                       # CLOSED phase
 │   │   ├── cdm_parser.py              # Seville CDM block parser + load_run
 │   │   ├── fault_generator.py         # load-trace-driven synthetic generator
-│   │   └── ...                        # measurements, tests, Model A
+│   │   └── ...                        # measurements, tests, Models A and B, Phase 5
 │   └── rul/                           # ACTIVE line
 ├── notebooks/
 │   └── spatial/                       # 01 (frozen), 02, 03 (stale)
@@ -114,10 +116,13 @@ the same `extract_load_trace` / `detect_holds` / `extract_dynamic_segments` /
 
 > **Phases 1–5 and 3b below are the CLOSED spatial line.** Retained for
 > attribution and because their findings stand; see
-> [`docs/phase_closure_spatial.md`](docs/phase_closure_spatial.md). Phases 4
+> [`docs/phase_closure_spatial.md`](docs/phase_closure_spatial.md). ~~Phases 4
 > and 5 were scoped under that line and are **retired with it** — Model B was
-> never built and the no-false-alarm test is not pending. **The active line is
-> RUL** and does not inherit this numbering.
+> never built and the no-false-alarm test is not pending.~~ **Superseded,
+> November 2026:** the line stays closed, but its experimental arc was
+> afterwards run to completion — Model B was built and Phase 5 was run. Results
+> in one place: [`docs/spatial/final_results.md`](docs/spatial/final_results.md).
+> **The active line is RUL** and does not inherit this numbering.
 
 The single source of truth for phase numbering in this repo — supersedes
 any other phase reference elsewhere (including notes/discussion outside
@@ -168,13 +173,23 @@ no-false-alarm check, which is Phase 5 below.
   proceed to Phase 4; neither is the default.
 
 - **Phase 4 — Fault classification models**: a snapshot spatial-vs-bulk
-  classifier, and a sequence-based (LSTM) predictive/precursor model. **NOT
-  STARTED — queued behind Phase 3b, deliberately.** Training the spatial arm
-  against the current fault patterns would let it score near-perfectly on a
-  basis-mismatch artifact the bulk arm is blind to, confirming the project's
-  central hypothesis for the wrong reason (§10).
-- **Phase 5 — No-false-alarm validation**: validate both Phase 4 models
-  against real healthy dynamic-load data. **NOT STARTED.**
+  classifier (Model A), and a predictive/precursor model (Model B; built as a
+  windowed logistic model, not an LSTM — torch is deliberately not a
+  dependency). **COMPLETE.** Model A: spatial beats bulk by +0.07 to +0.12
+  macro-F1 depending on estimator, almost entirely on starvation. Model B:
+  prediction works at per-fault horizons of 1 s (starvation), 2 s (flooding)
+  and 20 s (drying, indicative only), and **the pre-registered criterion
+  "spatial does not help" fired for every fault** — the bulk arm predicts at
+  least as well. All numbers are on synthetic faults and none is real-fault
+  accuracy.
+- **Phase 5 — No-false-alarm validation**: both Phase 4 models run against the
+  real healthy dynamic-load data. **COMPLETE — and failed as pre-registered:**
+  fourteen of sixteen models false-alarm on the real healthy cell (most above
+  85% of timesteps). The models learned the generator's load-to-fault rule
+  rather than a fault signature. Only Model B's starvation predictor with
+  spatial input passes (1.0–2.7%).
+
+  Full account: [`docs/spatial/final_results.md`](docs/spatial/final_results.md).
 
 ---
 

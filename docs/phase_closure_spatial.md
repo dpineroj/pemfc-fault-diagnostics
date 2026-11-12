@@ -357,6 +357,32 @@ second attempt are what make this a partial result rather than nothing at all
 The capped-vs-uncapped comparison, with its provenance limits, is recorded in
 §12h of `spatial/synthetic_generator_notes.md`.
 
+**Superseded in part, November 2026 — one further attempt was made, and it
+completed.** The text above is left as written; it was accurate when written.
+During the completion campaign (§8) a single final attempt was authorised,
+with its rule fixed in advance (§12i: one attempt, no more). It resumed the
+three persisted cells and ran the remaining five to a clean exit, so the
+uncapped run now covers **all 16 cells in both starvation arms**.
+
+| | capped | uncapped |
+|---|---|---|
+| logistic, split = cell | +0.103 to +0.123 | +0.100 to +0.119 |
+| logistic, split = trace | +0.109 to +0.130 | +0.112 to +0.130 |
+| random forest, split = cell | +0.066 to +0.082 | +0.080 to +0.083 |
+
+Holding out any one load trace, including the over-represented Inverse_Flow,
+leaves the delta between +0.108 and +0.140. **The cap did not change the
+conclusion.**
+
+One limit, stated because the run's own closing line overstates it: that line
+reports every fit converged, but it can only speak for the five cells fitted
+in the final process. The three resumed cells (directional arm, scales 0.00
+to 0.50) were fitted by processes that died before recording convergence, so
+48 of 128 fits have no convergence record. They were not re-fitted, since
+that would have been a further attempt. **The capped run therefore remains
+the phase's quoted result, and "+0.07 to +0.12 depending on estimator" stands
+unchanged**; the uncapped run is its corroboration. Full account: §12j.
+
 ---
 
 ## 8. Amendment — the experimental arc completed through Phase 5
