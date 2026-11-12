@@ -5,6 +5,11 @@ the line deliberately so that what it established stays legible and
 attributable, and so that a reader arriving later can tell which claims it
 supports and which it never did.
 
+**Amended November 2026 (§8):** the experimental arc was afterwards run to
+completion through Phase 5 — the predictive model and the false-alarm test on
+the real cell. The closure and its reasoning are unchanged. §8 changes how
+§1's result should be read, and says how.
+
 The work is not deleted. It becomes background to the active line (bulk-signal
 health-state estimation and remaining-useful-life prediction under dynamic
 load). Every section below describes a finished thing.
@@ -351,3 +356,177 @@ second attempt are what make this a partial result rather than nothing at all
 
 The capped-vs-uncapped comparison, with its provenance limits, is recorded in
 §12h of `spatial/synthetic_generator_notes.md`.
+
+---
+
+## 8. Amendment — the experimental arc completed through Phase 5
+
+**Added November 2026, after the closure.** The line stays closed. What
+changed is that the experiments it had scoped and not run — the predictive
+model (Model B) and the false-alarm test on the real cell (Phase 5) — were
+run to completion, so that the phase ends on measurements rather than on
+intentions. Sections 1–7 are left as written; where this section changes how
+one of them should be read, it says so here rather than editing it there.
+
+Full record: §13–§16 of `spatial/synthetic_generator_notes.md`. Single
+cold-readable account: `spatial/final_results.md`.
+
+### 8a. Model B — prediction, at each fault's own horizon
+
+Model B asks the question the project was actually framed around: given a
+window in which **no fault is yet confirmed**, will one be confirmed a fixed
+time ahead? Design, horizons, splits and falsification criteria were written
+and committed before any model code (§13, commit `fc3fb28`). All 192 fits
+converged.
+
+Results are per fault at that fault's own horizon and are **never aggregated
+across faults**, because the horizons differ by a factor of twenty.
+
+| fault | horizon | spatial F1 | bulk F1 | spatial − bulk [95% CI] |
+|---|---|---|---|---|
+| starvation | 1 s | 0.829 – 0.865 | 0.897 – 0.901 | −0.035 to −0.072; intervals reach zero in three of four arm/split cells |
+| flooding | 2 s | 0.870 – 0.880 | 0.945 – 0.951 | −0.065 to −0.080; **every interval wholly below zero** |
+| drying *(indicative)* | 20 s | 0.905 – 0.912 | 0.932 – 0.936 | −0.020 to −0.031 |
+
+**The pre-registered criterion that fired is "spatial does not help" — for
+every fault, in both starvation arms, under both splits.** The bulk arm
+predicts at least as well everywhere and measurably better for flooding.
+
+**Both arms achieve the horizon for all three faults.** The per-fault
+precursor windows of §3 were a separability measurement; they are now
+confirmed by a trained predictor.
+
+Drying is *indicative, not established*: its pre-registered minimum of 30
+trigger events was met as written (33), but only 13 events contribute
+positive windows at its configuration, and the minimum had been written
+against the wrong count. The favourable reading was not taken.
+
+**How this changes the reading of §1.** §1 reports that spatial resolution
+helped a *snapshot* classifier, almost entirely through starvation. Model B
+shows that advantage **does not extend to prediction**: per the branch fixed
+in advance (§11e, branch 3), *starvation's predictive spatial advantage is
+not demonstrated by this work*. Asked only "starvation ahead, or nothing?",
+both arms score 0.996–1.000 — two bulk features answer it.
+
+The honest limit of that null: it is a statement about a level-and-trend
+linear model under equal regularisation in both arms, which costs the
+652-feature arm more than the 4-feature one. Tuning per arm after seeing the
+result was considered and declined, because it would have been choosing the
+analysis after the outcome. The null shows that *this* model gains nothing
+from the grid, not that no model could.
+
+### 8b. Phase 5 — the false-alarm test on the real healthy cell
+
+The real spatial dataset is healthy-only and was held out of every training
+and selection step for this purpose; the script asserts the real-data loader
+had not been imported when the final models were trained. Criterion, fixed
+and committed before the run (§14, commit `153f5b1`): false-alarm rate
+≤ 5% on **all four** real recording configurations; > 50% means the model
+learned the simulator.
+
+**The claim that was available was narrow, and is stated at the result.**
+The real load channel drove generation, and the healthy family's form was
+chosen with the real template in view. A pass would therefore have meant
+quietness on *unseen spatial realisations of operating conditions the models
+had seen* — not on unseen operating conditions, and not structural
+independence.
+
+**Fourteen of sixteen models fail.**
+
+| model | spatial input | bulk input |
+|---|---|---|
+| Model A (snapshot), directional | 96 – 99% — simulator-learned | 85 – 89% — simulator-learned |
+| Model A (snapshot), no_axis | 7 – 9% on two sessions, 96 – 98% on two | 88 – 89% — simulator-learned |
+| Model B starvation | **1.0 – 2.7% — PASS (both arms)** | 1.6 – 6.6% — fail |
+| Model B flooding | 4.1 – 18.0% — fail | 6.1 – 7.8% — fail |
+| Model B drying | 93 – 99% — simulator-learned | 92 – 94% — simulator-learned |
+
+**The models trained on this generator do not stay quiet on the real healthy
+cell.** Diagnostics run afterwards (verdicts unchanged) show why:
+
+- The prediction path is sound — the same stored models alarm on 0.1–0.6% of
+  *synthetic* healthy rows.
+- **The bulk arm learned the generator's trigger rule.** At a healthy mean
+  current density, changing the load level alone flips its output from
+  healthy to drying. In the generator, sustained high load *causes* drying;
+  healthy operation above 40% load is 55 of 33,515 training rows. The real
+  cell spends 78% of its recording healthy at sustained constant load.
+- **The spatial arm's healthy region does not contain the real cell.** It
+  reads the two flatter recording sessions as flooded, and whether it reads
+  the other two as healthy depends on which starvation arm was in training.
+
+The one pass — Model B's starvation configuration with spatial input — is
+real as registered and should not be over-read: its false-alarm rate is
+exactly zero on conditioning holds (78% of the timesteps) and 3.4–12.7% on
+the dynamic segments.
+
+**A pre-registered expectation of my own was wrong.** §14b predicted the bulk
+arm would be quiet "nearly by construction". It alarms on 85–89% of real
+timesteps. Recorded with the result; the prediction is not edited.
+
+**How this changes the reading of §1.** The §1 delta compares two arms that
+share this defect, so it is not void as a comparison. But Phase 5 extends §4
+from the fault *patterns* to the *models*: no absolute accuracy from Model A
+or Model B says anything about a real cell, healthy or faulted.
+
+### 8c. The closure reasoning is unchanged
+
+**The line was closed for the reason in §2a — a 324-segment plate has no
+deployment path — and that reason does not depend on any number in this
+section.** It was decisive when the snapshot result favoured the spatial
+arm, and it would have been decisive had Model B favoured it too.
+
+The new results bear only on §2b, the evidentiary objection, and they
+tighten it: the advantage was narrow in snapshot classification, is absent
+in prediction, and the models do not transfer to the real cell. They are
+recorded as the completion of the arc, not as a new argument for a decision
+already made on other grounds.
+
+### 8d. What the phase does and does not establish, complete
+
+**Establishes** (all on this generator unless marked *real*):
+
+- *real* — CV(J) is 34× more load-invariant than σ(J).
+- *real* — the healthy template is radial, fixture-locked, and stable across
+  sessions (r ≥ 0.976).
+- Per-fault precursor horizons of roughly 1 s, 2 s and 20 s, now confirmed by
+  a trained predictor in both arms; a 30 s horizon does not transfer to
+  dynamically triggered faults.
+- A snapshot classifier gains +0.07 to +0.12 macro-F1 from spatial input,
+  depending on estimator, almost entirely on starvation.
+- A predictive classifier gains nothing from spatial input, and loses a
+  little.
+- *real* — classifiers trained on this generator false-alarm on the real
+  healthy cell; they encode the generator's load-to-fault rule.
+
+**Does not establish:**
+
+- any real-fault detection or prediction accuracy, for either arm;
+- that bulk signals suffice on a real cell — the bulk arm's strength rests
+  partly on the generator expressing a fault as lost mean current, which a
+  real galvanostatic cell does not do;
+- that spatial resolution cannot help prediction under a different model
+  class;
+- anything about detection sensitivity from Phase 5, which contains no
+  faults.
+
+### 8e. The permanent limitation, restated
+
+§11a of `spatial/synthetic_generator_notes.md`, verbatim, and still accurate
+as written:
+
+> **Phase 3b produces mutually coherent, literature-grounded fault patterns. It
+> does NOT produce validated ones.** No downstream result may describe fault
+> spatial patterns as validated, and no writeup may imply the fault side
+> received the treatment the healthy side did.
+>
+> **This is a permanent limitation, not a gap pending future work within this
+> project's scope.** It is not resolved by more careful modelling, a better
+> literature search, or additional analysis of the existing dataset. It is
+> resolved only by fault-labelled spatially-resolved data, which this project
+> has established does not exist and cannot be produced without hardware.
+> Stated in the same register as §6d: the limitation is to be reported, not
+> managed away.
+
+**No Model A or Model B number in this document or any other is real-fault
+accuracy.**

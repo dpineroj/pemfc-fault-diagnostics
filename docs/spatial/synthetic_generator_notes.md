@@ -3362,8 +3362,9 @@ Inverse / Inverse_Air / Inverse_H₂). Pass requires ≤ 5% on all four.
 | B drying | no_axis | spatial | 0.956 0.928 0.954 0.941 | **FAIL, simulator-learned** |
 | B drying | no_axis | bulk | 0.936 0.929 0.928 0.923 | **FAIL, simulator-learned** |
 
-**Fourteen of sixteen fail. Model A fails in every arm; seven of its eight
-arm-configuration families exceed 50% and are simulator-learned.** The only
+**Fourteen of sixteen fail. Model A fails in every arm: three of its four
+arm/input combinations exceed 50% on all four configurations, and the fourth
+exceeds it on two.** The only
 passes are Model B's starvation configuration, spatial input, in both
 starvation arms.
 
