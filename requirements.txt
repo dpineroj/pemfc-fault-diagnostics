@@ -1,0 +1,11 @@
+# Runtime dependencies for the hfc package and the scripts it imports.
+# Tested on Python 3.12 with: numpy 2.5.0, scipy 1.18.0, pandas 3.0.3,
+# scikit-learn 1.9.0, joblib 1.5.3, threadpoolctl 3.6.0, matplotlib 3.11.0.
+# torch is deliberately NOT a dependency (docs/spatial/synthetic_generator_notes.md).
+numpy>=2.0
+scipy>=1.13
+pandas>=2.2
+scikit-learn>=1.5
+joblib>=1.4
+threadpoolctl>=3.5
+matplotlib>=3.8
