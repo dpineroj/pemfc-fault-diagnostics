@@ -5,6 +5,11 @@ the line deliberately so that what it established stays legible and
 attributable, and so that a reader arriving later can tell which claims it
 supports and which it never did.
 
+**Amended again, POST-HOC (§9): the headline result of §1 does not survive
+holding out the cell — for an unseen cell the spatial advantage reverses.
+Read §9a before quoting anything from §1.** The closure and its reasoning are
+unchanged.
+
 **Amended November 2026 (§8):** the experimental arc was afterwards run to
 completion through Phase 5 — the predictive model and the false-alarm test on
 the real cell. The closure and its reasoning are unchanged. §8 changes how
@@ -556,3 +561,100 @@ as written:
 
 **No Model A or Model B number in this document or any other is real-fault
 accuracy.**
+
+---
+
+## 9. Amendment (POST-HOC) — the follow-up, and one conclusion overturned
+
+**Added November 2026, after §8.** Everything in this section comes from
+post-hoc work: conceived after the phase's results were seen, pre-registered
+as a plan before any fit (§17 of `spatial/synthetic_generator_notes.md`), and
+reported in §18 there. Sections 1–8 are left as written. **The closure and
+its reasoning (§2) are unchanged.**
+
+### 9a. §1's headline result is wrong in sign for a new cell
+
+§1 says spatial resolution beat bulk-only on a snapshot classifier by +0.07
+to +0.12 macro-F1. **That figure was measured with every test cell also
+present in training.** The simulated cells were seeded without a load-trace
+term, so the same five cells recurred in every trace, and neither of the two
+splits used ever held one out (§17b). Nobody checked.
+
+With the cell held out — same data, same models, the original result
+reproduced first to within 0.001 —
+
+| | cells seen in training (as §1 reports) | cell held out |
+|---|---|---|
+| logistic regression | +0.10 to +0.13 | **−0.18 to −0.22** |
+| random forest | +0.07 to +0.08 | **−0.30 to −0.38** |
+
+every held-out interval lying wholly below zero. The spatial arm's macro-F1
+falls from 0.94 to about 0.62; the two-feature bulk arm stays at 0.82.
+
+**So §1's answer — "Yes, but narrowly" — does not stand as written.** What
+the phase measured is that a spatial model recognises fault patterns better
+*on cells it has already been shown*. On a cell it has not seen, with the
+five cells this work was built on, it does worse than two bulk numbers.
+§1's per-class table (starvation precision 0.875 against 0.505) carries the
+same qualification.
+
+This is not evidence that spatial information is useless: a 326-feature
+model trained on four cells learns those four cells, and one result with
+forty cells per trace points toward the gap closing with more of them
+(§18f). That was not tested for Model A and is not claimed.
+
+### 9b. What else the follow-up found
+
+- **Model B's null stands and is stronger.** With the cell held out the
+  spatial arm predicts worse than bulk for every fault, by 0.08 to 0.38 F1
+  (§18b), and the null survives giving both arms the same tuning budget
+  (§18h, exploratory). §8a's "spatial does not help" understated it.
+- **§8a's horizons stand** (1 s, 2 s, 20 s, both arms). **Drying stays
+  indicative**: the target of 30 contributing events was not reached (23),
+  and cannot be from four load traces (§18f).
+- **§8b's Phase 5 result stands.** A re-analysis shows no model was quiet
+  while the cell was actually being driven; the two passes were on steady
+  load (§18d). Retraining with fault-free companion runs — a healthy cell
+  working hard — removes the specific bulk-arm defect §8b diagnosed, and
+  eight of sixteen models then pass the same criterion. **That re-test is
+  not independent** and none is at or below 5% during driving (§18g).
+- **An explanation of mine in the generator notes (§15e) was falsified** by
+  the test registered to check it (§18c).
+- **The three unrecorded Model A convergence cells of §7 are verified**
+  (§18a). §7's quoted figures are unchanged, and inherit §9a.
+
+### 9c. A tool, built afterwards
+
+A generator and detector package (`hfc`; `docs/tool_design.md`,
+`hfc_models/MODEL_CARD.md`) was built on a new generator in which a fault
+redistributes current and lowers voltage instead of removing current, every
+cell is unique to one load profile, and healthy operation covers the whole
+load range. It is not part of the closed phase's evidence and is recorded
+here only so that this document does not contradict it:
+
+- On that generator the spatial variant scores *better* than bulk on unseen
+  cells. On the phase's own generator it scores worse. **The two generators
+  give opposite answers, each traceable to an assumption, and neither is
+  evidence about a real cell.** That is where the spatial-versus-bulk
+  question actually stands at the end of this project.
+- On the real healthy recording (not an independent test) the tool's bulk
+  default false-alarms on 1–3% of samples when calibrated within a session,
+  6–14% during driving, and up to 73% when calibrated on a different session.
+
+### 9d. Why the closure is unchanged, and what §2b now reads as
+
+**§2a — a 324-segment plate has no deployment path — decided the closure
+and does not depend on any of this.**
+
+§2b said the evidence was narrower than the framing. It is now narrower
+than §2b said: the snapshot advantage it called "concentrated in one fault
+type" is, for an unseen cell, absent and reversed. That is recorded as the
+completion of the record, not as a new reason for a decision made on other
+grounds.
+
+### 9e. The permanent limitation
+
+§4 quotes it and it is unchanged: every fault label in this project is
+synthetic, the fault patterns are coherent and literature-grounded and not
+validated, and **no number here — from Model A, Model B, Phase 5, the
+follow-up or the tool — is real-fault accuracy.**

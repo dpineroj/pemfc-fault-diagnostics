@@ -170,3 +170,46 @@ the reported status is not. **Read the log's terminal line.**
 This is the second standing question in this file, alongside the
 arm-asymmetry one above. Both exist because a plausible-looking wrong answer
 is more dangerous than an obvious failure.
+
+## Standing check: a split's name is not evidence of what it holds out
+
+**Before trusting any "held-out X" result, list which X are in each fold's
+train and test sides and count the overlap.** Label-only; takes seconds.
+
+The instance (generator notes Sec. 17b, 18i): cells were seeded as
+`BASE_SEED + 1000 * cell_idx`, with no trace term, so the same five cells
+recurred under every load trace. The split called "unseen CELL"
+(`GroupKFold` on `(trace, cell)`) held out a *combination* and never a cell.
+Model A's headline spatial advantage (+0.07 to +0.12) was measured that way
+and **reverses** (-0.18 to -0.22) when the cell is actually held out.
+
+- For the old experiments: `scripts/spatial/posthoc_confirm_cell_leak.py`.
+- For `hfc` datasets: `python -m hfc check-leaks DATASET [--split-file ...]`.
+  `hfc train` refuses to run if it fails.
+- When generating: every design factor goes into the seed
+  (`SeedSequence(seed, spawn_key=(...))` in `hfc/gen.py`), and group IDs are
+  exported with the data.
+
+This is the third standing check in this file. Same shape as the other two:
+the thing that *describes* the operation ("grouped by cell") was taken as
+evidence the operation happened.
+
+## The `hfc` package and post-hoc runs
+
+- `python -m hfc ...` from the repo root; tests with
+  `./hfc_env/Scripts/python.exe -W ignore -m unittest discover -s tests`
+  (**pytest is not installed**).
+- Launch long hfc commands through `scripts/hfc_run.sh <name> <args>` and
+  Sec. 17-style runs through `scripts/spatial/posthoc_run.sh`; both write a
+  log ending `EXIT=<python's code>`. `posthoc_run.sh` refuses to overwrite an
+  existing log -- one attempt per pre-registered run.
+- Generated datasets go in `hfc_data/` (gitignored, 1.8 GB for `extensive`).
+  `np.savez` is NOT byte-reproducible (zip timestamps); use
+  `hfc.gen.save_npz_deterministic`.
+- joblib workers at 2 BLAS threads each: 3 concurrent jobs x 6 workers
+  oversubscribes 20 cores, and on battery the machine throttles hard and may
+  sleep mid-run. Runs write results per cell, so a sleep costs time, not
+  results.
+- A numpy string array silently truncates to its dtype width (`U24` cut
+  `outside_training_envelope`). Size reason/label arrays generously and test
+  the exact string.

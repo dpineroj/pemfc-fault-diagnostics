@@ -2,6 +2,12 @@
 
 Health-state estimation and remaining-useful-life prediction for PEM fuel cells from **bulk** measurements under real automotive drive cycles — and whether a **load-invariant health indicator** improves either, relative to the load-confounded indicators the dynamic-load RUL literature currently uses.
 
+> **Correction, POST-HOC (November 2026).** The figure quoted in the next two
+> paragraphs — spatial beats bulk by +0.07–0.12 macro-F1 — was measured with
+> every test cell also present in training. **With the cell held out it
+> reverses: −0.18 to −0.22.** The paragraphs are left as written; see
+> [`docs/spatial/final_results.md`](docs/spatial/final_results.md) §10.
+
 **Completed phase — spatially-resolved fault detection (CLOSED November 2026).** The project's first line asked whether a spatially resolved current-density grid improves fault detection over bulk signals. It does, by +0.07–0.12 macro-F1 depending on estimator, concentrated almost entirely in starvation — but a 324-segment current-density plate is a laboratory instrument with no deployment path, which is an objection to the premise that cannot be answered by measuring harder. Closed deliberately rather than abandoned: see **[`docs/phase_closure_spatial.md`](docs/phase_closure_spatial.md)** for the result, the reasoning, what stands independently, and what was never validated.
 
 **Completed phase — spatial fault detection (closed Nov 2026):** a single bulk voltage sensor cannot reliably distinguish between fault modes (flooding, drying, oxygen/hydrogen starvation) — different faults can produce similar voltage drops. A spatially resolved grid of current-density and temperature sensors can, because each fault type leaves a distinct spatial signature. Closed; see [`docs/phase_closure_spatial.md`](docs/phase_closure_spatial.md). The result was +0.07–0.12 macro-F1, concentrated in starvation, with no deployment path for a 324-sensor plate.
@@ -255,6 +261,20 @@ no-false-alarm check, which is Phase 5 below.
   spatial input passes (1.0–2.7%).
 
   Full account: [`docs/spatial/final_results.md`](docs/spatial/final_results.md).
+
+- **POST-HOC follow-up (generator notes §17–§18) — COMPLETE.** Pre-registered
+  as a plan before any fit. Found that neither Phase 4 split held out a cell;
+  with the cell held out, **Model A's spatial advantage reverses** (−0.18 to
+  −0.22, intervals wholly below zero) and Model B's null strengthens and
+  survives matched tuning. Drying remains underpowered (23 of a target 30
+  events). Fault-free companion runs remove the bulk arm's Phase 5 defect in
+  a re-test that is **not independent**; no model is quiet during driving.
+- **The `hfc` tool — BUILT (post-hoc).** See
+  [the tool](#the-tool-hfc-post-hoc-november-2026) above and
+  [`hfc_models/MODEL_CARD.md`](hfc_models/MODEL_CARD.md). Real-fault accuracy
+  unverified.
+- **RUL direction — OPEN, not started.** See
+  [`docs/rul/open_questions.md`](docs/rul/open_questions.md).
 
 ---
 

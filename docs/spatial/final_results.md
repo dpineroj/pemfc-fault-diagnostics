@@ -5,6 +5,12 @@ says what was asked, what was measured, what was fixed in advance, which
 pre-set criteria fired, what that means, and which errors were caught on the
 way and what each would have cost.
 
+> **Amended, POST-HOC — read section 10 first.** A follow-up found that the
+> "held-out" cells in sections 4 and 5 were never held out. With the cell
+> held out, **section 4's spatial advantage reverses** (−0.18 to −0.22);
+> section 5's finding stands and strengthens. Sections 1–9 are left as
+> written.
+
 The phase is **closed** (`docs/phase_closure_spatial.md`). This document
 records how its experiments ended; it does not reopen it.
 
@@ -280,3 +286,143 @@ how to obtain it and regenerate the processed load traces.
 
 Section numbers refer to `docs/spatial/synthetic_generator_notes.md`.
 `run_logs/` is gitignored; the scripts regenerate it.
+
+---
+
+## 10. POST-HOC follow-up — read this before quoting anything above
+
+**Everything in this section is post-hoc.** It was done after sections 1–9
+were written, in response to problems they exposed. The plan, configurations,
+seeds and pass/fail criteria were written and committed before any model was
+fitted (§17 of the generator notes, commit `33d78c4`, amended `718034a`);
+results are in §18 there. Sections 1–9 are not edited. Where this section
+contradicts one of them, **this section is the current statement.**
+
+Still true throughout: every fault is synthetic and **no number here is
+real-fault accuracy.**
+
+### 10a. The one conclusion that is overturned
+
+**Section 4 says spatial input helps a snapshot classifier by +0.07 to +0.12.
+For a cell the model has not seen, that is wrong in sign.**
+
+The simulated cells were seeded by a cell number alone, so the same five
+cells appeared under every load trace. Both ways of splitting the data put
+every test cell's spatial template into training. A label-only check
+confirmed it: no fold of either split ever held out a cell.
+
+Re-run with the cell held out — same data, same models, after first
+reproducing section 4's numbers to three decimals:
+
+| | test cells also in training (section 4) | **cell held out** |
+|---|---|---|
+| logistic regression, spatial − bulk | +0.10 to +0.13 | **−0.18 to −0.22** |
+| random forest, spatial − bulk | +0.07 to +0.08 | **−0.30 to −0.38** |
+| spatial macro-F1 | 0.94 | 0.62 |
+| bulk macro-F1 | 0.82 | 0.82 |
+
+Every held-out interval lies wholly below zero (for example
+−0.192 [−0.307, −0.085]). 528 fits, all converged.
+
+**What section 4 measured was recognition of fault patterns on cells already
+seen.** With four training cells and 326 features, the spatial model learns
+the cells. This does not show spatial information is useless — one result
+with forty cells per trace suggests the gap narrows with more cells — but
+with the data this project's conclusions were built on, the advantage is not
+there.
+
+I predicted, in writing, that the advantage would shrink and stay positive.
+It did not.
+
+### 10b. What stands, and is stronger
+
+| earlier finding | after the follow-up |
+|---|---|
+| **Model B: the grid does not help prediction** (section 5) | Stands. With the cell held out the spatial arm is worse by 0.17 (starvation), 0.29 (flooding), 0.08 (drying) F1, intervals wholly below zero. It also survives giving both arms the same tuning budget (exploratory; 5,040 fits). |
+| **Horizons of 1 s, 2 s, 20 s** (section 5) | Stand, in both arms, with the cell held out. |
+| **Drying is indicative only** (section 5) | Stands. A target of 30 contributing events was set in advance; 40 cells per trace reached 23. Ten of the 33 trigger events never contribute whatever the cell. The four load traces are the limit. |
+| **Phase 5: the models learned the simulator** (section 6) | Stands. Split by segment type, **no model was quiet while the cell was being driven**; the two passes were on steady load. |
+| the three Model A cells with no convergence record (section 4) | Closed: re-fitted, all converged, results match to 0.0002. |
+
+### 10c. Can the Phase 5 failure be fixed? Partly — and not independently tested
+
+One change was made to the training data, once: every simulated cell got a
+second, **fault-free** run over the same load profile, so that a healthy cell
+working hard exists in training.
+
+- **On synthetic data, with the cell held out:** the bulk predictor keeps its
+  recall (starvation 0.86, drying 0.94, flooding 0.92 — a five-point loss on
+  flooding only). The spatial predictor loses 10 to 27 points of recall and
+  its precision collapses.
+- **On the real healthy recording — NOT AN INDEPENDENT TEST**, since the
+  change was designed after that recording's failures were examined: eight of
+  sixteen models now pass the original criterion, against two. The bulk
+  snapshot model goes from 85–89% false alarms to 2–4%. **None is at or below
+  5% during driving on all four sessions** (bulk: 5–18%).
+
+So the specific defect is removable, and a healthy real cell under transient
+load still does not look like the generator's.
+
+### 10d. The tool
+
+A package, `hfc`, now generates datasets, classifies state and predicts
+faults (README; `docs/tool_design.md`; `hfc_models/MODEL_CARD.md`). It uses
+a **new generator**, built to remove the two defects above: a fault
+redistributes current and lowers voltage rather than removing current; every
+cell is unique to one load profile; healthy operation covers the full load
+range. The detector calibrates on a healthy stretch of the user's own cell.
+
+Held-out synthetic results (80 unseen cells, unseen load profiles, including
+the real FC-DLC cycles; 95% CIs over cells):
+
+| | bulk (default) | spatial (opt-in) |
+|---|---|---|
+| state, macro-F1 | 0.755 [0.730, 0.776] | 0.989 [0.982, 0.994] |
+| false alarms on fault-free runs | 0.35% [0.17, 0.59] | 0.00% |
+| starvation ahead, 1 s, F1 | 0.721 [0.619, 0.806] | 0.656 [0.560, 0.741] |
+| flooding ahead, 2 s, F1 | 0.147 [0.109, 0.188] | 0.711 [0.666, 0.757] |
+| drying ahead, 20 s, F1 | 0.271 [0.168, 0.380] | 0.861 [0.724, 0.951] |
+
+Real healthy recording, **not an independent test**: calibrated within a
+session, bulk false-alarms on 1.1–2.7% of samples (0% on steady load,
+**5.7–13.7% during driving**); calibrated on a different session, up to 73%.
+
+**The two generators disagree about spatial versus bulk.** On the old one,
+with the cell held out, spatial is worse. On the new one it is much better.
+Each answer follows from an assumption — whether a fault removes current,
+how large its voltage signature is, whether segment noise is independent.
+**Neither is evidence about a real cell.** After everything in this
+document, that question is open, and only fault-labelled real data can
+close it.
+
+### 10e. Errors caught in the follow-up, and what each cost
+
+| error | how caught | cost |
+|---|---|---|
+| Cells seeded without a trace term, so no split held out a cell | a control experiment raised an artifact alarm; a label-only fold check then showed the overlap | **Not avoided.** The headline spatial advantage was reported for months and is wrong in sign for a new cell |
+| My advice to quote the "trace-and-cell" split as the clean one | the same fold check: it leaks more than the split I had blamed | avoided — corrected before anything was built on it |
+| My explanation of that control alarm (shared cell identity) | a test registered in advance to be able to falsify it; it fired with the cell held out too | avoided — it is now recorded as falsified and the alarm as unexplained |
+| My estimate that 40 cells would yield ~98% of drying events | the label-only count: 23 of 33 | avoided — the target had been fixed in advance and was not lowered, so the result is an honest "underpowered" |
+| The tool's abstain reason silently truncated to 24 characters | a test asserting the exact reason string | avoided — out-of-range inputs would have been labelled with a reason no downstream filter matched |
+| The generator assumed every real load trace has three dynamic segments | the first full-scale generation crashed | a two-minute run; the failed log is kept |
+
+Pattern, same as section 8: the expensive one was a property nobody thought
+to check because the split's *name* said it was handled.
+
+### 10f. Reproducing the follow-up
+
+| result | script | log |
+|---|---|---|
+| cell-leak confirmation | `scripts/spatial/posthoc_confirm_cell_leak.py` | `run_logs/posthoc/cell_leak.log` |
+| Model A, corrected splits | `scripts/spatial/posthoc_model_a.py --dataset capped` | `ws1_model_a_capped.log` |
+| Model B, corrected splits | `scripts/spatial/posthoc_model_b.py --dataset v1 --splits S2,S3 --cfgs all --binary` | `ws1_model_b_v1.log` |
+| convergence re-fit | `scripts/spatial/posthoc_ws2_model_a_refit.py` | `ws2_model_a_refit.log` |
+| Phase 5 by segment type; re-test | `scripts/spatial/posthoc_phase5.py --mode split` / `--mode v2` | `ws3a_phase5_split.log`, `ws3c_phase5_v2.log` |
+| companions: Model B, paired cost, Model A | `posthoc_model_b.py --dataset v2 …`, `posthoc_ws3d_paired.py`, `posthoc_model_a.py --dataset v2` | `ws3d_*.log` |
+| matched tuning | `scripts/spatial/posthoc_ws4_nested.py` | `ws4_nested.log` |
+| drying power | `posthoc_checks.py --check drying`, `posthoc_model_b.py --dataset dry40 …` | `ws5_*.log` |
+| the tool | `python -m hfc …` (README) | `run_logs/hfc/*.log` |
+
+Launch through `scripts/spatial/posthoc_run.sh <name> <script> [args]`, which
+writes a log ending `EXIT=<code>` and refuses to overwrite an existing one.
+6,744 logistic fits across the follow-up, none non-converged.
