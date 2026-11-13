@@ -4276,3 +4276,159 @@ the detector built afterwards on a different generator, with a handful of
 engineered spatial features, behaves differently (`hfc_models/MODEL_CARD.md`).
 **Exploratory; it does not override or strengthen the pre-registered §15
 result as evidence.**
+### 18i. Workstream 1 — Model A under the corrected splits: **the spatial advantage does not survive, it reverses**
+
+`run_logs/posthoc/ws1_model_a_capped.log`, `EXIT=0`. The capped
+configuration, exactly as quoted (50,000 samples, sampling seeds
+`777 + cell_idx`).
+
+**Convergence: 528 logistic fits recorded, 0 non-converged** (most
+iterations 1,650 of 5,000), plus 96 random-forest fits.
+
+**The reproduction gate passed** (§17c), so what follows corrects the
+original experiment and not a different one:
+
+| | re-fitted | recorded in §12h |
+|---|---|---|
+| S0 delta range | +0.103 to +0.122 | +0.103 to +0.123 |
+| S1 delta range | +0.109 to +0.130 | +0.109 to +0.130 |
+| S0, scale 1.00: spatial / bulk | 0.944, 0.945 / 0.822, 0.828 | 0.945 / 0.822–0.828 |
+
+Macro-F1, scale 1.00 (the generator's actual amplitude); the other three
+scales agree to within 0.03 and are in the log:
+
+| split | cell held out | arm | spatial | bulk | spatial − bulk [95% CI] |
+|---|---|---|---|---|---|
+| S0 *(original)* | no | directional | 0.944 | 0.822 | +0.122 [+0.111, +0.134] |
+| S1 *(original)* | no | directional | 0.945 | 0.815 | +0.130 [+0.120, +0.139] |
+| S2 | **yes** | directional | 0.606 | 0.822 | **−0.217 [−0.346, −0.096]** |
+| **S3** | **yes** | directional | **0.623** | **0.814** | **−0.192 [−0.307, −0.085]** |
+| S0 *(original)* | no | no_axis | 0.945 | 0.828 | +0.117 [+0.108, +0.127] |
+| S1 *(original)* | no | no_axis | 0.944 | 0.822 | +0.122 [+0.113, +0.132] |
+| S2 | **yes** | no_axis | 0.643 | 0.829 | **−0.185 [−0.297, −0.068]** |
+| **S3** | **yes** | no_axis | **0.645** | **0.822** | **−0.177 [−0.303, −0.059]** |
+| S0, random forest | no | directional / no_axis | 0.969 / 0.962 | 0.887 / 0.896 | +0.082 / +0.066 |
+| **S3, random forest** | **yes** | directional / no_axis | 0.524 / 0.446 | 0.821 / 0.828 | **−0.297 [−0.420, −0.177] / −0.382 [−0.492, −0.276]** |
+
+Across all four amplitude scales and both arms, the S3 delta runs from
+**−0.177 to −0.218**, every interval wholly below zero.
+
+**Stated plainly, as §17c required: Model A's spatial advantage does not
+survive holding out the cell. It reverses.** When the classifier is tested on
+a cell it has never seen, the spatial arm's macro-F1 falls from 0.94 to
+about 0.62 and the two-feature bulk arm, unmoved at 0.82, beats it by about
+0.19. The random forest — which had produced the *smaller*, more
+conservative end of the quoted range — reverses harder still.
+
+**What the quoted result was.** "+0.07 to +0.12 depending on estimator" was
+measured under two splits that both let every test cell's template into
+training (§17b). It is a true statement about recognising fault patterns on
+**cells the model has already seen**. It was reported — in §12, in
+`phase_closure_spatial.md` §1, in `final_results.md` §4 and in the README —
+as a spatial advantage in fault classification without that qualification,
+because nobody, including me, had checked whether the split held out cells.
+**As a claim about a new cell, it is wrong in sign.**
+
+Those passages are not edited. From here on, per §17c, every quotation of
+Model A's delta carries this: *measured with test cells present in training;
+with the cell held out the delta is −0.18 to −0.22.*
+
+**What this does and does not show.** It does not show that spatial
+information is useless. It shows that a 326-feature model trained on **four
+cells** learns those four cells. S2 and S3 give nearly the same number, so
+the unseen trace adds almost nothing; the loss is the unseen cell. §18f is
+the hint at what more cells would do: with forty per trace, the drying
+predictor's spatial deficit shrank from −0.08 to −0.03. Whether enough cells
+would turn Model A's delta positive again was not tested and is not claimed.
+With the five cells this project's results were built on, it is negative.
+
+**My expectation in §17c was wrong.** I wrote that I expected the delta "to
+shrink and stay positive". It did not stay positive. I had the mechanism
+right — the spatial arm can identify a cell and the bulk arm cannot — and
+underestimated it by the whole size of the effect.
+
+### 18j. Workstream 3d — Model A on the companion data, cell held out
+
+`run_logs/posthoc/ws3d_model_a_v2.log`, `EXIT=0`. Uncapped v1 plus
+companions (171,920 samples), scale 1.00, S3. **80 fits, 0 non-converged.**
+
+| arm | spatial | bulk | spatial − bulk [95% CI] | false alarms on held-out *synthetic* healthy rows: spatial / bulk |
+|---|---|---|---|---|
+| directional | 0.475 | 0.779 | −0.304 [−0.431, −0.165] | **62.2%** / 15.6% |
+| no_axis | 0.528 | 0.767 | −0.239 [−0.385, −0.091] | **64.7%** / 17.6% |
+
+On a held-out cell the spatial snapshot classifier calls a healthy
+**synthetic** grid faulty almost two times in three. That is the §16 failure
+on the real cell, reproduced inside the generator once the test cell is
+unseen: the spatial arm's notion of healthy is its training cells'
+templates. The bulk arm's 16–18% is the cost of labelling the first,
+near-zero-severity seconds of an episode as the fault (§12d's lowest
+severity bin), which two bulk features cannot tell from healthy.
+
+### 18k. Scorecard, errors caught, and close-out checks
+
+**Pre-stated expectations, all of them, against outcomes:**
+
+| stated in | expectation | outcome |
+|---|---|---|
+| §17c | Model A delta shrinks under S3 **and stays positive** | **WRONG.** Negative: −0.18 to −0.22 |
+| §17c | Spatial arm loses more than bulk from S1 to S3 | right (−0.32 against 0.00) |
+| §17c | Model B criterion 3 fires again | right, and more strongly |
+| §17c | no confident expectation for the control alarm | it fired under S3; §15e's explanation falsified |
+| §17e | bulk Model A below 50% on the real cell; not predicted to pass 5% | below 50%: right. It passed, which I did not predict |
+| §17e | spatial Model A still fails on Inverse and Inverse_H₂ | right |
+| §17e | Model B drying below 50% with bulk input | right |
+| §17g | ~0.98 of drying events contribute at 40 cells | **WRONG.** 23 of 33; ten never contribute |
+
+**Errors caught in this follow-up, and their cost:**
+
+- **Neither original split held out a cell** (§17b). *Cost: not avoided.*
+  Model A's spatial advantage was reported for months under a split that
+  could not support it, and is wrong in sign for an unseen cell. Caught only
+  because an artifact alarm in an unrelated control (§15e) made someone look
+  at fold composition — and the first reading of that alarm (mine) blamed the
+  wrong split.
+- **My §15e/§12j advice to "quote the (trace, cell) split"** recommended the
+  split that leaks *more*. *Cost avoided:* corrected in §17b before anything
+  was built on it.
+- **My §15e explanation of the control alarm** was a hypothesis written as a
+  likely cause. *Cost avoided:* §17c registered a test that could falsify it,
+  and it did (§18c).
+- **The drying arithmetic** (§17g). *Cost avoided* by the rule fixed in
+  advance: the target was not lowered and the cell count was not raised, so
+  the wrong estimate produced an honest "underpowered" rather than a
+  manufactured pass.
+- **A launch wrapper that would have overwritten a log on retry** was written
+  to refuse instead (`posthoc_run.sh`), so one-attempt-per-run is enforced by
+  the tool, not by memory.
+
+**Close-out checks.**
+
+- `fault_generator.py` SHA-256 unchanged
+  (`32c57c020e3d39890efd8cdb02ca9be3b25e59e4867ba312b0b022fef14d0958`);
+  `git diff` against the pre-registration commit `442e57c` is empty for it,
+  for notebook 01, and for every registered experiment script
+  (`phase4_model_a.py`, `phase4_model_b.py`, `phase5_false_alarm.py`,
+  `model_b_data.py`).
+- Regression tests after the last fit match those before the first:
+  `test_fault_generator.py` passes; `test_phase3b_acceptance.py` 40 of 41,
+  the same pre-registered §11h failure
+  (`run_logs/posthoc/regression_after.log`).
+- **Every run was a single attempt and every log ends `EXIT=0`.** No run
+  crashed; no retry was needed or made.
+- Fits in §18, all with a stored convergence record: 48 + 600 + 320 + 112 +
+  5,040 + 16 + 528 + 80 = **6,744 logistic fits, 0 non-converged.**
+
+### 18l. What §18 changes, in one place
+
+| earlier statement | status after §18 |
+|---|---|
+| Model A: spatial beats bulk by +0.07 to +0.12 (§12) | **True only for cells seen in training. For an unseen cell: −0.18 to −0.22.** The quoted figure is not edited and must not be quoted without this. |
+| Model B: spatial does not help prediction (§15) | **Stands, strengthened.** Under the corrected split the spatial arm is 0.08–0.38 F1 below bulk; survives matched tuning (exploratory). |
+| Horizons 1 s / 2 s / 20 s achieved in both arms (§15) | Stands under S3. |
+| Drying indicative, not established (§15, §13l) | **Stands.** Target of 30 events not met (23); structural limit of four traces. |
+| Control alarm caused by shared cell identity (§15e) | **Falsified.** Unexplained. |
+| "Quote the (trace, cell) split" (§15e, §12j) | **Withdrawn.** Quote S3. |
+| Three §12j cells lack a convergence record | **Closed.** Verified, matching. |
+| Phase 5: 14 of 16 models fail on the real cell (§16) | **Stands as the Phase 5 result.** Not-independent re-test with companions: 8 of 16 fail; none is quiet during driving. |
+| Closure reasoning (`phase_closure_spatial.md` §2) | **Unchanged.** |
