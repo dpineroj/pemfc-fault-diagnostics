@@ -4175,3 +4175,104 @@ for exactly that reason (§17g).
 With forty cells the spatial arm's deficit under S3 is far smaller than with
 five (−0.03 against −0.08): more training cells is what the spatial arm was
 short of, consistent with §18b.
+### 18g. Workstream 3c — the re-test on the real recording — **NOT AN INDEPENDENT TEST**
+
+`run_logs/posthoc/ws3c_phase5_v2.log`, `EXIT=0`. One change (companions),
+tested once. **§16b's table remains the Phase 5 result.** This re-test was
+designed after that recording's failures were inspected, on that recording;
+a pass here shows a diagnosed defect was removed and validates nothing.
+
+**Convergence: all 16 retrained models converged.** The independence
+assertion (real-data loader not imported during training) passed.
+
+False-alarm rate per real configuration (Normal / Inverse / Inverse_Air /
+Inverse_H₂), same transform and same registered criterion as §14:
+
+| model | arm | input | all timesteps | holds | **driving** | as registered |
+|---|---|---|---|---|---|---|
+| A snapshot | directional | spatial | 0.979 0.976 0.988 0.961 | 1.000 ×4 | 0.900 0.942 0.942 0.816 | FAIL, simulator-learned |
+| A snapshot | directional | bulk | 0.036 0.020 0.025 0.038 | 0.000 ×4 | 0.167 0.047 0.116 0.175 | **PASS** |
+| A snapshot | no_axis | spatial | 0.062 0.071 0.065 0.078 | 0.000 ×4 | 0.287 0.170 0.304 0.365 | FAIL |
+| A snapshot | no_axis | bulk | 0.038 0.020 0.026 0.038 | 0.000 ×4 | 0.176 0.047 0.124 0.176 | **PASS** |
+| B starvation | directional | spatial | 0.011 0.016 0.014 0.028 | 0.000 ×4 | 0.053 0.038 0.067 0.130 | **PASS** |
+| B starvation | directional | bulk | 0.009 0.015 0.015 0.028 | 0.000 ×4 | 0.043 0.037 0.070 0.130 | **PASS** |
+| B starvation | no_axis | spatial | 0.011 0.017 0.015 0.029 | 0.000 ×4 | 0.052 0.042 0.070 0.135 | **PASS** |
+| B starvation | no_axis | bulk | 0.010 0.015 0.014 0.027 | 0.000 ×4 | 0.048 0.035 0.064 0.124 | **PASS** |
+| B flooding | directional | spatial | 0.323 0.104 0.140 0.127 | 0.214 0 0 0 | 0.723 0.251 0.658 0.593 | FAIL |
+| B flooding | directional | bulk | 0.026 0.021 0.023 0.043 | 0.000 ×4 | 0.119 0.051 0.109 0.202 | **PASS** |
+| B flooding | no_axis | spatial | 0.196 0.016 0.065 0.034 | 0.185 0 0 0 | 0.238 0.039 0.306 0.157 | FAIL |
+| B flooding | no_axis | bulk | 0.025 0.021 0.024 0.043 | 0.000 ×4 | 0.117 0.051 0.111 0.202 | **PASS** |
+| B drying | directional | spatial | 0.111 0.034 0.092 0.053 | ≤ 0.007 | 0.493 0.082 0.428 0.246 | FAIL |
+| B drying | directional | bulk | 0.035 0.054 0.054 0.071 | 0.000 ×4 | 0.166 0.131 0.254 0.332 | FAIL (narrowly) |
+| B drying | no_axis | spatial | 0.072 0.022 0.068 0.038 | ≤ 0.004 | 0.321 0.054 0.312 0.179 | FAIL |
+| B drying | no_axis | bulk | 0.035 0.054 0.053 0.070 | 0.000 ×4 | 0.165 0.130 0.250 0.328 | FAIL (narrowly) |
+
+**Eight of sixteen now pass the registered all-timestep criterion, against
+two in §16b.** Seven of the eight bulk models pass or miss by two points;
+the spatial Model A in the directional arm is unchanged at 96–99%.
+
+What each registered outcome meant (§17e) and which occurred:
+
+- *The diagnosed defect is removable.* For the bulk arm, yes: the models
+  that alarmed on 85–93% of real timesteps because "high load means drying"
+  now alarm on 2–7%, and on **none** of the hold samples. Giving the
+  training data a healthy cell working hard was sufficient. **That is the
+  whole of what this re-test shows, and it is not validation.**
+- *Models that still fail.* Every spatial model except the starvation
+  predictor. Nothing in the change addressed the spatial arm's own failure
+  (§16d: its healthy region does not contain the real cell), and rule 17a
+  forbade addressing it.
+
+**And the caveat that §18d makes unavoidable: the passes are again mostly
+dilution.** On the dynamic segments alone, no model is at or below 5% on all
+four configurations. The passing bulk models alarm on 4–20% of driving
+samples. A healthy real cell under transient load still does not look like
+this generator's healthy cell.
+
+**Expectations stated in §17e, against what happened:**
+
+| expectation | outcome |
+|---|---|
+| Bulk Model A falls below 50% on all four, both arms; I did **not** predict it would pass 5% | Below 50%: **yes**. It also **passed** (2.0–3.8%) — better than I expected, on the all-timestep criterion. The mechanism I gave for doubt (real mean-current excursions reading as early drying) shows up where I said it would, in the driving segments (5–18%). |
+| Spatial Model A still fails on Inverse and Inverse_H₂ | **Yes.** Directional: 96–98% on those two (and on the other two). No_axis: 7–8%, a narrow fail on all four. |
+| Model B drying falls below 50% with bulk input; spatial uncertain | **Yes** (3.5–7.1%); it fails 5% narrowly. Spatial 2–11%. |
+
+No pre-stated expectation was contradicted this time. One was conservative.
+
+### 18h. Workstream 4 — matched tuning (EXPLORATORY): the null survives
+
+`run_logs/posthoc/ws4_nested.log`, `EXIT=0`. Nested cross-validation on the
+§15 data: outer split S3, inner leave-one-cell-out, the same five-value grid
+and the same budget for both arms (§17f).
+
+**Convergence: 5,040 fits recorded (4,800 inner, 240 outer), 0
+non-converged.** No candidate was made ineligible; no configuration is
+unreportable.
+
+| fault (horizon) | arm | untuned Δ F1, `C = 1` [95% CI] | **tuned Δ F1 [95% CI]** | tuned F1 spatial / bulk |
+|---|---|---|---|---|
+| starvation (1 s) | directional | −0.171 [−0.331, −0.037] | **−0.117 [−0.249, −0.012]** | 0.776 / 0.893 |
+| | no_axis | −0.376 [−0.527, −0.134] | **−0.516 [−0.680, −0.200]** | 0.378 / 0.894 |
+| flooding (2 s) | directional | −0.289 [−0.421, −0.128] | **−0.227 [−0.352, −0.096]** | 0.725 / 0.952 |
+| | no_axis | −0.254 [−0.373, −0.102] | **−0.269 [−0.405, −0.080]** | 0.684 / 0.953 |
+| drying (20 s) | directional | −0.082 [−0.188, −0.018] | **−0.088 [−0.191, −0.033]** | 0.868 / 0.956 |
+| | no_axis | −0.070 [−0.174, −0.010] | **−0.085 [−0.203, −0.029]** | 0.872 / 0.957 |
+
+**As registered: the null survives matched tuning in all six
+configurations.** Every tuned interval lies wholly below zero.
+
+The selection behaved the way §15f's worry predicted and it still did not
+matter: the spatial arm chose much stronger regularisation than the
+registered value (`C = 0.01` or `0.001` in most folds; the bulk arm stayed at
+0.1–1), and tuning moved its F1 by at most +0.07 and in two configurations
+*down*. Under-regularisation was real and was not the reason the spatial arm
+lost.
+
+**What this narrows.** §15f's stated limit was that the null held for "a
+level-and-trend linear model" under equal regularisation. The second half of
+that limit is now removed, exploratorily: it holds under matched tuning too.
+The first half stands — this is still one model class on raw segments, and
+the detector built afterwards on a different generator, with a handful of
+engineered spatial features, behaves differently (`hfc_models/MODEL_CARD.md`).
+**Exploratory; it does not override or strengthen the pre-registered §15
+result as evidence.**
