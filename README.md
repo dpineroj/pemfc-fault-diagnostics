@@ -10,6 +10,62 @@ Health-state estimation and remaining-useful-life prediction for PEM fuel cells 
 
 ---
 
+## The tool: `hfc` (POST-HOC, November 2026)
+
+> **Real-fault accuracy is unverified.** This project has no labelled real
+> fault data. Every fault the tool has been trained and evaluated on is
+> synthetic. Its output is a screening aid, not a diagnosis.
+
+`hfc` is a Python package with a CLI that does three things:
+
+1. **Generates** synthetic PEM fuel cell datasets shaped like the ones this
+   project worked with (`hfcgen-4.0`): current-density and temperature grids
+   at any resolution, Seville-named bulk channels, fault labels, and a
+   Seville-raw-layout export. Every file is flagged `SYNTHETIC`.
+2. **Classifies** a cell's state — healthy, flooding, drying, starvation —
+   from stack current and cell voltage, optionally with a current-density
+   grid.
+3. **Predicts** an upcoming fault at its own horizon: starvation 1 s,
+   flooding 2 s, drying 20 s.
+
+It calibrates on a known-healthy stretch of **your own** cell and reports
+residuals against that; it abstains instead of alarming when the input is
+outside what it can judge.
+
+```
+# generate a dataset (seconds for smoke; ~2.5 min and 1.8 GB for extensive)
+python -m hfc generate --preset smoke --out hfc_data/smoke
+python -m hfc check-leaks hfc_data/smoke
+
+# run the shipped models on a new recording
+python -m hfc run --mapping examples/mapping_table.json --models hfc_models \
+       --calibrate-range 0 1800 --out hfc_out
+```
+
+`--calibrate-range START_S END_S` names a stretch of the recording you assert
+is healthy; `--calibrate-mapping other.json` uses a separate healthy
+recording instead. The mapping file says where the data is and what its
+columns and units mean — see [`examples/`](examples/). Outputs: a
+per-sample predictions CSV, and a report in Markdown and JSON.
+
+**What the evidence says** (full detail in
+[`hfc_models/MODEL_CARD.md`](hfc_models/MODEL_CARD.md)):
+
+- On 80 held-out synthetic cells under load profiles never seen in training,
+  the bulk default scores macro-F1 0.755 [0.730, 0.776] with 0.35% false
+  alarms; it is nearly blind to flooding (recall 0.18). The opt-in spatial
+  variant scores 0.989 on the same cells — a difference that follows from the
+  generator's assumptions and is not evidence about real cells.
+- On the real healthy recording (**not an independent test**), calibrated
+  within a session, the bulk default false-alarms on 1–3% of samples overall
+  and **6–14% during actual driving**. Calibrated on a different session it
+  false-alarms on up to 73%: a baseline does not transfer between sessions.
+
+Design: [`docs/tool_design.md`](docs/tool_design.md). Tests:
+`python -m unittest discover -s tests`.
+
+---
+
 ## Project structure
 
 ```
@@ -22,7 +78,8 @@ PEMFC-FAULT-DIAGNOSTICS/
 │   │   ├── synthetic_generator_notes.md   # full design record, §1–§16
 │   │   ├── data_requests.md           # drafted, unsent dataset request
 │   │   └── external_fault_datasets.md
-│   └── rul/                           # ACTIVE line (health state + RUL)
+│   ├── tool_design.md                 # design of the hfc generator and detector
+│   └── rul/                           # future work (health state + RUL); open_questions.md
 ├── scripts/
 │   ├── common/                        # transfers to both lines
 │   │   ├── extract_load_trace.py      # FC-DLC segmentation, hold detection
@@ -30,13 +87,21 @@ PEMFC-FAULT-DIAGNOSTICS/
 │   ├── spatial/                       # CLOSED phase
 │   │   ├── cdm_parser.py              # Seville CDM block parser + load_run
 │   │   ├── fault_generator.py         # load-trace-driven synthetic generator
+│   │   ├── posthoc_*.py               # POST-HOC follow-up runs (notes §17-§18)
 │   │   └── ...                        # measurements, tests, Models A and B, Phase 5
+│   ├── hfc_run.sh                     # run an hfc command with an EXIT=<code> log
+│   ├── hfc_demo_seville.py            # detector on the real recording (not independent)
 │   └── rul/                           # ACTIVE line
 ├── notebooks/
-│   └── spatial/                       # 01 (frozen), 02, 03 (stale)
+│   └── spatial/                       # 01 (frozen), 02, 03 (superseded)
+├── hfc/                               # THE TOOL: generator + detector package
+├── hfc_models/                        # shipped models, MODEL_CARD.md, metrics
+├── examples/                          # mapping files for `python -m hfc run`
+├── tests/                             # unittest suite for hfc
 ├── data/
 │   ├── raw/                           # third-party data (git-ignored)
 │   └── processed/                     # regenerable traces (git-ignored)
+├── hfc_data/                          # generated SYNTHETIC datasets (git-ignored)
 ├── run_logs/                          # run logs + results (git-ignored)
 ├── figures/                           # generated outputs (git-ignored)
 └── hfc_env/                           # Python 3.12.9 virtualenv (git-ignored)
@@ -214,15 +279,13 @@ isn't lost between sessions:
 
 ## Known stale artifacts
 
-- **`notebooks/spatial/03_dynamic_fault_generation.ipynb` is stale and will raise.**
-  Phase 3b made `starvation_arm` a required argument to
-  `generate_labeled_run` (Sec. 11d/11h: starvation is generated two ways and
-  neither is the default), so the notebook's bare `generate_labeled_run()`
-  call now fails deliberately rather than silently picking an arm. Its
-  starvation panels also describe the superseded diagonal-gradient
-  interpolation. **Needs the arm argument plus a re-execution, and its
-  starvation commentary rewritten against §11c/§11d.** Scoped as its own task,
-  not folded into Phase 3b. Recorded here so it is not rediscovered as a bug.
+- **`notebooks/spatial/03_dynamic_fault_generation.ipynb` — SUPERSEDED
+  (November 2026), no longer stale-and-unmarked.** It opens with a banner
+  saying so. It was superseded rather than refreshed: its fault cells use the
+  pre-Phase-3b interpolation and will raise against the current generator
+  (which requires an explicit `starvation_arm`), and every figure it held is
+  now produced by a re-runnable script recorded in the generator notes. Use
+  the `hfc` package to generate data.
 
 ## Known open questions
 

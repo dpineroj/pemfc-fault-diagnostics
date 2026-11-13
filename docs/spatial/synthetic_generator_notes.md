@@ -3915,3 +3915,263 @@ model in §17 is fitted; none changes a criterion.
 version is being built separately for the detector tool
 (`docs/tool_design.md`); it plays no part in §17 and §17's results are not
 re-derived on it.
+
+---
+
+
+## 18. POST-HOC follow-up — results
+
+**Everything in this section is post-hoc** (§17a). It was run as registered
+in §17 and amended in §17j, on the existing generator, one attempt per run.
+Nothing in §12–§16 is edited; where a result here bears on one of them it is
+reported alongside. No number here is real-fault accuracy (§11a).
+
+Logs are in `run_logs/posthoc/`, each ending `EXIT=<code>`; every fit's
+convergence record is stored in the result file it belongs to. Subsections
+are in the order the runs finished being written up, not the order of §17h.
+
+`fault_generator.py` was not modified: `test_fault_generator.py` and
+`test_phase3b_acceptance.py` were run before the first fit
+(`run_logs/posthoc/regression_before.log`; 40 of 41, the one failure being
+the pre-registered §11h finding) and again at close-out (§18k).
+
+### 18a. Workstream 2 — the convergence-record gap: closed
+
+`run_logs/posthoc/ws2_model_a_refit.log`, `EXIT=0`.
+
+**Convergence: 48 fits recorded, 0 non-converged**, most iterations 1,887
+against a cap of 5,000.
+
+**Verdict as registered (§17d): MATCH.** Every re-fitted macro-F1 is within
+0.0002 of the resumed value (tolerance 0.001); bulk predictions agree on
+100% of samples, spatial on 99.68–99.98%.
+
+| scale | split | resumed delta | re-fitted delta |
+|---|---|---|---|
+| 0.00 | cell | +0.1133 | +0.1134 |
+| 0.00 | trace | +0.1239 | +0.1239 |
+| 0.25 | cell | +0.1156 | +0.1154 |
+| 0.25 | trace | +0.1263 | +0.1264 |
+| 0.50 | cell | +0.1171 | +0.1171 |
+| 0.50 | trace | +0.1281 | +0.1280 |
+
+So the three §12j cells that had no convergence record are now verified, and
+the uncapped run's convergence is established for all 128 fits (80 asserted
+in §12j, 48 here). **This changes no quoted number**: the capped run remains
+the quoted Model A result and "+0.07 to +0.12 depending on estimator" stands
+as written. Both of those splits leak cell identity (§17b), which §18f
+addresses.
+
+### 18b. Workstream 1 — Model B under the corrected splits
+
+`run_logs/posthoc/ws1_model_b_v1.log`, `EXIT=0`. Same data, features, model
+and criteria as §15; only the split differs. S0 and S1 are §15's own
+predictions, read from disk; their intervals differ from §15's in the third
+decimal because the bootstrap generator is seeded differently here.
+
+**Convergence: 600 fits recorded, 0 non-converged** (spatial at most 1,201
+iterations, bulk 121, cap 20,000).
+
+**Criterion 3 — SPATIAL DOES NOT HELP — fires for every fault, both
+starvation arms, under all four splits.** §15's null survives the corrected
+split, and gets stronger.
+
+F1, directional starvation arm (no_axis in the log; same picture):
+
+| fault (horizon) | split | spatial | bulk | spatial − bulk [95% CI] |
+|---|---|---|---|---|
+| starvation (1 s) | S0 original | 0.829 | 0.900 | −0.072 [−0.174, +0.006] |
+| | S1 original | 0.865 | 0.900 | −0.035 [−0.097, +0.021] |
+| | S2 cell held out | 0.683 | 0.904 | −0.222 [−0.385, −0.087] |
+| | **S3 cell and trace held out** | **0.721** | **0.893** | **−0.171 [−0.323, −0.048]** |
+| flooding (2 s) | S0 original | 0.870 | 0.947 | −0.077 [−0.117, −0.037] |
+| | S1 original | 0.880 | 0.945 | −0.065 [−0.098, −0.032] |
+| | S2 cell held out | 0.619 | 0.947 | −0.328 [−0.465, −0.157] |
+| | **S3 cell and trace held out** | **0.656** | **0.945** | **−0.289 [−0.426, −0.114]** |
+| drying (20 s, indicative) | S0 original | 0.905 | 0.936 | −0.031 [−0.070, −0.004] |
+| | S1 original | 0.911 | 0.932 | −0.020 [−0.045, −0.002] |
+| | S2 cell held out | 0.790 | 0.943 | −0.153 [−0.296, −0.060] |
+| | **S3 cell and trace held out** | **0.865** | **0.947** | **−0.082 [−0.184, −0.017]** |
+
+Under S3 with the no_axis arm: starvation −0.376 [−0.542, −0.137], flooding
+−0.254 [−0.371, −0.103], drying −0.070 [−0.173, −0.009].
+
+**What holding out the cell does, plainly.** The bulk arm does not move
+(0.89–0.95 whichever split). **The spatial arm loses 0.10 to 0.25 F1 the
+moment the test cell is one it has not seen** (S0→S2, S1→S3), and holding out
+the trace as well changes little after that. So **§15's spatial scores were
+inflated by cell identity** — the spatial arm had seen each test cell's
+template under other traces — and the spatial deficit §15 reported was an
+*underestimate*. This is the over-parameterisation §13l and §15e named,
+measured: 652 features fitted to 4 training cells.
+
+The horizon is still achieved in both arms for every fault (J lower bounds
++0.50 to +0.87), so §15's horizon finding stands. Binary
+healthy-versus-starvation is 0.992–0.999 in both arms under S3.
+
+**The expectation in §17c ("criterion 3 fires again") held.** The size of the
+spatial arm's drop I did not predict.
+
+### 18c. The starvation-control alarm — §15e's explanation is falsified
+
+Spatial minus bulk recall on blind positives of the 30 s starvation control
+(the registered artifact check, §13i criterion 4 as amended):
+
+| split | cell held out | trace held out | dBlind 95% CI, directional / no_axis | alarm |
+|---|---|---|---|---|
+| S0 | no | no | [−0.219, +0.090] / [−0.223, +0.109] | no |
+| S1 | no | **yes** | [+0.142, +0.296] / [+0.151, +0.295] | **yes** |
+| S2 | **yes** | no | [−0.208, +0.081] / [−0.220, +0.076] | no |
+| S3 | **yes** | **yes** | [+0.065, +0.321] / [+0.060, +0.282] | **yes** |
+
+**The alarm fires when the trace is held out and only then, whether or not
+the cell is held out.** §17c fixed what that means in advance: *cell identity
+is not the explanation and §15e's candidate is falsified.* It is. I proposed
+shared cell identity as the leak in §15e on a premise I had not checked
+(§17b), and the test built to check it says no.
+
+Per §17c the artifact is now **unexplained and is reported as unexplained**,
+and no further split is tried. What the table does show is where it lives:
+on an unseen load trace, the bulk arm's recall on blind positives collapses
+(0.38 → 0.11) while the spatial arm's does not (0.30–0.33). Both arms are
+reading the load trace at a 30 s horizon (§15e); the bulk arm, which has only
+load and mean current, appears to learn trace-specific timing that does not
+transfer, and the spatial arm's noisier, higher-false-positive predictions
+(FPR 0.19–0.23 against 0.07) degrade less. That is a description, not a
+tested explanation. The control's spatial delta remains unreportable as an
+advantage — and is negative in any case.
+
+The flooding control alarms under all four splits with the opposite sign
+(bulk better on blind positives, e.g. S3 [−0.655, −0.280]), as in §15e.
+
+### 18d. Workstream 3a — the stored Phase 5 models, holds versus driving
+
+`run_logs/posthoc/ws3a_phase5_split.log`, `EXIT=0`. No refitting: the 16
+stored models through the stored prediction path. **Descriptive. §16b's
+verdicts stand**; the 5% line against the dynamic-only rate is not a
+re-adjudication.
+
+False-alarm rate per real configuration (Normal / Inverse / Inverse_Air /
+Inverse_H₂), directional arm; no_axis in the log:
+
+| model | input | conditioning holds | dynamic segments (driving) |
+|---|---|---|---|
+| A snapshot | spatial | 1.000 ×4 | 0.933 0.942 0.941 0.818 |
+| A snapshot | bulk | 1.000 ×4 | 0.501 0.631 0.437 0.477 |
+| B starvation | spatial | 0.000 ×4 | 0.070 0.034 0.064 0.111 |
+| B starvation | bulk | 0.000 ×4 | 0.249 0.040 0.249 0.294 |
+| B flooding | spatial | 0.108 0.000 0.000 0.000 | 0.444 0.145 0.409 0.370 |
+| B flooding | bulk | 0.000 ×4 | 0.292 0.149 0.329 0.363 |
+| B drying | spatial | 1.000 ×4 | 0.941 0.859 0.972 0.844 |
+| B drying | bulk | 1.000 ×4 | 0.693 0.823 0.658 0.641 |
+
+**No stored model is quiet while the cell is actually being driven.** None
+has a dynamic-segment rate at or below 5% on all four configurations; the
+best (Model B starvation, spatial) is 3–11%. The two §16b passes were passes
+on dilution, as §16e said: exactly zero on the holds, which are 78% of the
+denominator. And the models that fail do so in two different ways — Model A
+and the drying predictor alarm on **every** hold sample, the flooding and
+starvation predictors on **none** — which is the load-regime rule of §16d
+seen from the other side.
+
+### 18e. Workstream 3b–d — companions: the fix, and what it costs (synthetic)
+
+**The pre-fit check passed** (§17j item 4;
+`run_logs/posthoc/check_companions.log`, `EXIT=0`): in every fold of S0–S3,
+for all five configurations, each fault-free companion lands on the same side
+as its faulted twin.
+
+**Model B on v2 (v1 + companions), S3** —
+`run_logs/posthoc/ws3d_model_b_v2.log`, `EXIT=0`. **Convergence: 320 fits, 0
+non-converged** (spatial at most 979 iterations, bulk 611).
+
+| fault (horizon) | arm | spatial P / R / F1 | bulk P / R / F1 | spatial − bulk F1 [95% CI] |
+|---|---|---|---|---|
+| starvation (1 s) | directional | 0.047 / 0.552 / 0.087 | 0.929 / 0.861 / **0.894** | −0.807 [−0.860, −0.675] |
+| | no_axis | 0.065 / 0.657 / 0.118 | 0.940 / 0.850 / **0.893** | −0.775 [−0.842, −0.562] |
+| flooding (2 s) | directional | 0.064 / 0.731 / 0.117 | 0.438 / 0.918 / **0.593** | −0.476 [−0.559, −0.299] |
+| | no_axis | 0.081 / 0.778 / 0.146 | 0.386 / 0.925 / **0.545** | −0.398 [−0.497, −0.169] |
+| drying (20 s, 13 events) | directional | 0.656 / 0.604 / 0.629 | 0.636 / 0.941 / **0.759** | −0.130 [−0.382, +0.128] |
+| | no_axis | 0.500 / 0.564 / 0.530 | 0.633 / 0.944 / **0.758** | −0.228 [−0.496, +0.059] |
+
+Criterion 3 fires for every fault and arm. Binary healthy-versus-starvation:
+both arms 0.994–0.999.
+
+**The paired cost** (§17e-3d: recall on own-fault positives, v2 minus v1,
+S3, identical positive windows; `run_logs/posthoc/ws3d_paired.log`):
+
+| fault | arm | input | recall v1 → v2 | difference [95% CI] | as registered |
+|---|---|---|---|---|---|
+| starvation | directional | bulk | 0.863 → 0.861 | −0.002 [−0.009, +0.007] | no measurable cost |
+| | | spatial | 0.712 → 0.552 | −0.159 [−0.256, −0.085] | **costs detection** |
+| | no_axis | bulk | 0.846 → 0.850 | +0.004 [+0.000, +0.010] | no measurable cost |
+| | | spatial | 0.787 → 0.657 | −0.129 [−0.244, −0.037] | **costs detection** |
+| flooding | directional | bulk | 0.967 → 0.918 | −0.049 [−0.062, −0.038] | **costs detection** |
+| | | spatial | 0.866 → 0.731 | −0.136 [−0.260, −0.037] | **costs detection** |
+| | no_axis | bulk | 0.973 → 0.925 | −0.047 [−0.061, −0.036] | **costs detection** |
+| | | spatial | 0.881 → 0.778 | −0.103 [−0.215, −0.010] | **costs detection** |
+| drying | directional | bulk | 0.958 → 0.941 | −0.017 [−0.057, +0.000] | no measurable cost |
+| | | spatial | 0.804 → 0.604 | −0.199 [−0.384, −0.029] | **costs detection** |
+| | no_axis | bulk | 0.958 → 0.944 | −0.014 [−0.047, +0.000] | no measurable cost |
+| | | spatial | 0.835 → 0.564 | −0.270 [−0.490, −0.059] | **costs detection** |
+
+**Reading it.** Giving the models healthy operation across the whole load
+range costs the **bulk** arm almost nothing in recall — nothing measurable
+for starvation and drying, five points for flooding. Its *precision* is
+another matter: against five times as many healthy windows, bulk flooding
+precision falls from 0.92 to 0.39–0.44, because a healthy low-load dwell and
+the first seconds of a flooding episode look alike in two bulk features.
+**The spatial arm is hurt badly in both**: it loses 10 to 27 points of recall
+and its precision on starvation and flooding collapses to 0.05–0.08. With
+652 features and four training cells it cannot separate "fault ahead" from
+the healthy variety the companions add.
+
+So on this generator the honest predictor — one that has seen a healthy cell
+working hard — is the bulk one: starvation F1 0.89, drying 0.76 (13 events;
+indicative), flooding 0.55–0.59.
+
+### 18f. Workstream 5 — drying power: UNDERPOWERED, as feared
+
+Label-only volume first (`run_logs/posthoc/ws5_drying_volume.log`):
+
+| cells per trace | distinct contributing drying events (normal / inv_flow / inv_air / inv_h2) | total |
+|---|---|---|
+| 5 | 6 / 1 / 5 / 6 | 18 |
+| 10 | 6 / 3 / 5 / 6 | 20 |
+| 20 | 6 / 4 / 6 / 6 | 22 |
+| 40 | 6 / 5 / 6 / 6 | **23** |
+
+**Target (§17g): 30, at least 5 per trace. Reached: 23 by labels, 21 in the
+fitted data. NOT MET.** The count was not raised and the target was not
+lowered.
+
+**My arithmetic in §17g was wrong.** I estimated 0.98 of events would
+contribute at 40 cells, assuming every event had the same per-cell chance.
+They do not: 10 of the 33 trigger events never contribute in any of 160
+cells. Their windows are blocked by something that does not depend on the
+cell's seed. Eight times the cells bought five more events. **The limit is
+the four load traces, as §17g said it might be, and more cells from this
+generator cannot lift it.** (The new generator's randomised cycles do; that
+is a different generator and a different result — `hfc_models/MODEL_CARD.md`.)
+
+The comparison was run once, as registered
+(`run_logs/posthoc/ws5_drying_dry40.log`, `EXIT=0`; **112 fits, 0
+non-converged**): 13,090 windows, 5,281 positives from 21 distinct events,
+414 healthy targets (48 in §15).
+
+| split | arm | spatial F1 | bulk F1 | spatial − bulk [95% CI] |
+|---|---|---|---|---|
+| S3 | directional | 0.926 | 0.951 | −0.025 [−0.041, −0.013] |
+| S3 | no_axis | 0.924 | 0.951 | −0.028 [−0.043, −0.014] |
+| S0 *(leaks)* | directional | 0.923 | 0.953 | −0.030 [−0.047, −0.015] |
+| S1 *(leaks)* | directional | 0.939 | 0.951 | −0.012 [−0.022, −0.004] |
+
+Criteria as written: **1 (uninformative: bulk F1 above 0.95)** and **3
+(spatial does not help)** both fire in every row. **Drying stays INDICATIVE,
+NOT ESTABLISHED.** The intervals are tight because 160 groups are resampled;
+the number of distinct load events behind them is 21. Both counts are given
+for exactly that reason (§17g).
+
+With forty cells the spatial arm's deficit under S3 is far smaller than with
+five (−0.03 against −0.08): more training cells is what the spatial arm was
+short of, consistent with §18b.
