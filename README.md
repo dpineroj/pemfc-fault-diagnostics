@@ -108,6 +108,11 @@ python -m hfc run --mapping examples/mapping_canonical.json --models hfc_models 
     --calibrate-range 0 400 --mode spatial --out hfc_data/out_spatial
 ```
 
+Step 2 abstains on about a fifth of the samples, almost all with the reason
+`load_outside_calibration`: the run later goes to loads the first 400 s never
+reached. That is the abstain logic doing its job, not an error. A
+calibration stretch should cover the loads you want judged.
+
 For your own data: copy [`examples/mapping_table.json`](examples/mapping_table.json),
 point it at your file, and set `--calibrate-range START_S END_S` to a stretch
 you know is healthy. To calibrate on a separate healthy recording instead,
